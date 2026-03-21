@@ -1,0 +1,26 @@
+{
+  "name": "Cafino",
+  "short_name": "Cafino",
+  "description": "Mobile-first coffee tracking with daily logs, trends, and theme personalization.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f2e9",
+  "theme_color": "#8f7648",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/download.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/download.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
