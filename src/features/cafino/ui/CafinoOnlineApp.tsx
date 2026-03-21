@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BarChart3, ChevronLeft, ChevronRight, Coffee, Hand, Plus, Search, Settings, Share, SquarePen } from "lucide-react";
+import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Hand, Heart, MessageCircle, Plus, Search, SendHorizontal, Settings, Share, SquarePen, UserRound } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
@@ -9,14 +9,14 @@ import { useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { CAFINO_THEMES, getThemeChoice } from "@/features/cafino/theme/themes";
 
 const COFFEE_TYPES = [
-  { id: "espresso", label: "Espresso", emoji: "☕", caffeine: 63 },
-  { id: "americano", label: "Americano", emoji: "🥃", caffeine: 75 },
-  { id: "latte", label: "Latte", emoji: "🥛", caffeine: 75 },
-  { id: "cappuccino", label: "Cappuccino", emoji: "☁️", caffeine: 75 },
-  { id: "flatwhite", label: "Flat White", emoji: "⬜", caffeine: 130 },
-  { id: "mocha", label: "Mocha", emoji: "🍫", caffeine: 90 },
-  { id: "signature", label: "Signature", emoji: "✨", caffeine: 100 },
-  { id: "others", label: "Others", emoji: "➕", caffeine: 80 },
+  { id: "espresso", label: "Espresso", emoji: "☕", icon: "/espresso.png", caffeine: 63 },
+  { id: "americano", label: "Americano", emoji: "🥃", icon: "/americano.png", caffeine: 75 },
+  { id: "latte", label: "Latte", emoji: "🥛", icon: "/latte.png", caffeine: 75 },
+  { id: "cappuccino", label: "Cappuccino", emoji: "☁️", icon: "/cappuccino.png", caffeine: 75 },
+  { id: "mocha", label: "Mocha", emoji: "🍫", icon: "/mocha.png", caffeine: 90 },
+  { id: "matcha", label: "Matcha", emoji: "🍵", icon: "/matcha.png", caffeine: 70 },
+  { id: "signature", label: "Signature", emoji: "✨", icon: "/signature.png", caffeine: 100 },
+  { id: "others", label: "Others", emoji: "➕", icon: "/others.png", caffeine: 80 },
 ] as const;
 
 type CoffeeTypeId = (typeof COFFEE_TYPES)[number]["id"];
@@ -24,6 +24,12 @@ type CoffeeTypeId = (typeof COFFEE_TYPES)[number]["id"];
 const SIZE_CAFFEINE: Record<string, number> = { Small: 0.75, Medium: 1, Large: 1.3, XL: 1.6 };
 const MONTH_SHORT = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const ACTION_WIDTH = 170;
+const DEV_NAME = "Gayle Monique Florencio";
+const DEV_ROLE = "Developer";
+const DEV_LOCATION = "Philippines";
+const DEV_EMAIL = "gayle@zentariph.com";
+const DEV_PORTFOLIO_URL = "https://portfolio-gayle.vercel.app";
+const DONATION_URL = "https://buymeacoffee.com/cafino";
 
 type StatsPeriod = "week" | "month" | "year";
 type TempOption = "Iced" | "Hot";
@@ -74,6 +80,46 @@ interface DraftState {
   homeDisplay: boolean;
 }
 
+interface BrandItem {
+  id: string;
+  name: string;
+  order: number;
+  logo: string | null;
+  cutout: boolean;
+}
+
+function DrinkTypeIcon({
+  type,
+  size,
+  className,
+}: {
+  type: (typeof COFFEE_TYPES)[number];
+  size: number;
+  className?: string;
+}) {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  if (loadFailed) {
+    return (
+      <span className={className} aria-hidden>
+        {type.emoji}
+      </span>
+    );
+  }
+
+  return (
+    <Image
+      src={type.icon}
+      alt={type.label}
+      width={size}
+      height={size}
+      className={className}
+      unoptimized
+      onError={() => setLoadFailed(true)}
+    />
+  );
+}
+
 function defaultDraft(date: string, initialType: CoffeeTypeId = COFFEE_TYPES[0].id): DraftState {
   const selected = COFFEE_TYPES.find((item) => item.id === initialType) ?? COFFEE_TYPES[0];
   return {
@@ -105,20 +151,28 @@ export function CafinoOnlineApp() {
   const setCafLimit = useCafinoStore((s) => s.setCafLimit);
   const shareCards = useCafinoStore((s) => s.shareCards);
   const setShareCards = useCafinoStore((s) => s.setShareCards);
-  const brandManage = useCafinoStore((s) => s.brandManage);
-  const setBrandManage = useCafinoStore((s) => s.setBrandManage);
   const themeId = useCafinoStore((s) => s.themeId);
   const setThemeId = useCafinoStore((s) => s.setThemeId);
   const preferredType = useCafinoStore((s) => s.preferredType);
-  const setPreferredType = useCafinoStore((s) => s.setPreferredType);
   const wallpaper = useCafinoStore((s) => s.wallpaper);
   const setWallpaper = useCafinoStore((s) => s.setWallpaper);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showDateDetail, setShowDateDetail] = useState(false);
-  const [showTypeSheet, setShowTypeSheet] = useState(false);
   const [showThemeSheet, setShowThemeSheet] = useState(false);
   const [showWidgetsSheet, setShowWidgetsSheet] = useState(false);
+  const [showBrandSheet, setShowBrandSheet] = useState(false);
+  const [showAddBrandSheet, setShowAddBrandSheet] = useState(false);
+  const [showDeveloperSheet, setShowDeveloperSheet] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [brands, setBrands] = useState<BrandItem[]>([]);
+  const [brandDraft, setBrandDraft] = useState({
+    name: "",
+    order: "",
+    logo: null as string | null,
+    cutout: false,
+  });
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [statsYear, setStatsYear] = useState(new Date().getFullYear());
@@ -468,6 +522,62 @@ export function CafinoOnlineApp() {
     reader.readAsDataURL(file);
   };
 
+  const onBrandLogoChange = (file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setBrandDraft((prev) => ({
+        ...prev,
+        logo: typeof reader.result === "string" ? reader.result : null,
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const resetBrandDraft = () => {
+    setBrandDraft({
+      name: "",
+      order: "",
+      logo: null,
+      cutout: false,
+    });
+  };
+
+  const onSaveBrand = () => {
+    const name = brandDraft.name.trim();
+    if (!name) {
+      return;
+    }
+
+    const order = Number(brandDraft.order) || 0;
+    const nextBrand: BrandItem = {
+      id: `${Date.now()}-${Math.round(Math.random() * 10000)}`,
+      name,
+      order,
+      logo: brandDraft.logo,
+      cutout: brandDraft.cutout,
+    };
+
+    setBrands((prev) => [...prev, nextBrand].sort((a, b) => a.order - b.order));
+    setShowAddBrandSheet(false);
+    resetBrandDraft();
+  };
+
+  const onSendFeedback = () => {
+    const message = feedbackText.trim();
+    if (!message) {
+      return;
+    }
+
+    const subject = encodeURIComponent("Feedback");
+    const body = encodeURIComponent(message);
+    window.location.href = `mailto:${DEV_EMAIL}?subject=${subject}&body=${body}`;
+    setFeedbackSent(true);
+  };
+
   const onInstallApp = async () => {
     if (!installPromptEvent) {
       return;
@@ -488,25 +598,52 @@ export function CafinoOnlineApp() {
 
   if (!started) {
     return (
-      <main className="cafino-app cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-3.5 sm:p-5" style={themeVars}>
-        <div className="mb-6 mt-6 flex flex-col items-center">
-          <div className="mb-6 h-28 w-28 overflow-hidden rounded-[30px] bg-white shadow-md sm:h-36 sm:w-36">
-            <Image src="/download.png" alt="Cafino logo" width={144} height={144} className="h-full w-full object-cover" priority />
-          </div>
-          <h1 className="cafino-title-xl text-[var(--cafino-text)]">Cafino</h1>
-          <p className="cafino-text-md mt-2 text-[var(--cafino-text-muted)]">Record your coffee journey</p>
-        </div>
+      <main className="cafino-app cafino-compact cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-3.5 sm:p-5" style={themeVars}>
+        <section className="relative mt-2 overflow-hidden rounded-[32px] border border-[var(--cafino-border)] bg-white p-4 shadow-[0_14px_30px_rgba(43,31,18,0.08)] sm:p-5">
+          <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-[var(--cafino-soft-strong)] opacity-55" />
+          <div className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-[var(--cafino-surface-2)] opacity-70" />
 
-        <div className="flex flex-1 flex-col gap-2.5 sm:gap-3">
-          {["Minimalist Design", "Coffee Calendar", "Coffee Statistics", "Card Sharing"].map((title, idx) => (
-            <div key={title} className="cafino-surface rounded-3xl border border-[var(--cafino-border)] bg-white p-3.5 sm:p-4">
-              <p className="cafino-title-lg text-[var(--cafino-text)]">{title}</p>
-              <p className="cafino-text-md mt-1 text-[var(--cafino-text-muted)]">{idx === 0 ? "Simple style to record every cup of coffee" : idx === 1 ? "Calendar statistics, clear and easy to browse" : idx === 2 ? "Multi-dimensional statistics by week, month, year" : "Beautiful coffee cards to share"}</p>
+          <div className="relative flex items-start gap-3 sm:gap-4">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--cafino-border)] bg-white shadow-sm sm:h-20 sm:w-20">
+              <Image src="/download.png" alt="Cafino logo" width={80} height={80} className="h-full w-full object-cover" priority />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--cafino-text-muted)]">Coffee Journal</p>
+              <h1 className="cafino-title-xl mt-1 text-[var(--cafino-text)]">Cafino</h1>
+              <p className="cafino-text-md mt-1.5 text-[var(--cafino-text-muted)]">Track every cup, monitor caffeine, and keep your coffee routine in one place.</p>
+            </div>
+          </div>
+
+          <div className="relative mt-3 grid grid-cols-2 gap-2.5">
+            <div className="rounded-2xl bg-[var(--cafino-surface-2)] p-2.5">
+              <p className="text-xs font-medium text-[var(--cafino-text-muted)]">Today</p>
+              <p className="mt-1 text-lg font-bold text-[var(--cafino-accent-strong)]">Stay Balanced</p>
+            </div>
+            <div className="rounded-2xl bg-[var(--cafino-surface-2)] p-2.5">
+              <p className="text-xs font-medium text-[var(--cafino-text-muted)]">Goal</p>
+              <p className="mt-1 text-lg font-bold text-[var(--cafino-accent-strong)]">Smart Sips</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3">
+          {[
+            { title: "Quick Logging", copy: "Save every cup in seconds." },
+            { title: "Calendar View", copy: "Browse your daily coffee flow." },
+            { title: "Deep Stats", copy: "Track caffeine, sugar, and spend." },
+            { title: "Share Cards", copy: "Share polished coffee snapshots." },
+          ].map((item, idx) => (
+            <div key={item.title} className="cafino-surface rounded-3xl border border-[var(--cafino-border)] bg-white p-3 sm:p-3.5">
+              <div className="mb-1.5 inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--cafino-soft-alt)] text-[var(--cafino-accent-strong)]">
+                {idx === 0 ? <Coffee size={16} /> : idx === 1 ? <Settings size={16} /> : idx === 2 ? <BarChart3 size={16} /> : <Share size={16} />}
+              </div>
+              <p className="text-base font-bold text-[var(--cafino-text)] sm:text-lg">{item.title}</p>
+              <p className="mt-1 text-xs text-[var(--cafino-text-muted)] sm:text-sm">{item.copy}</p>
             </div>
           ))}
         </div>
 
-        <button className="mt-4 h-14 rounded-3xl bg-[var(--cafino-accent)] text-xl font-bold text-white shadow-sm sm:h-16 sm:text-2xl" onClick={() => setStarted(true)}>
+        <button className="mt-3 h-12 rounded-3xl bg-[var(--cafino-accent)] text-lg font-bold text-white shadow-sm sm:h-14 sm:text-xl" onClick={() => setStarted(true)}>
           Get Started
         </button>
 
@@ -537,8 +674,8 @@ export function CafinoOnlineApp() {
   }
 
   return (
-    <main className="cafino-app cafino-frame flex w-full flex-col bg-[var(--cafino-soft)]" style={themeVars}>
-      <div className="flex-1 overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
+    <main className="cafino-app cafino-compact cafino-frame flex w-full flex-col bg-[var(--cafino-soft)]" style={themeVars}>
+      <div className="overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
         {activeTab === "home" && (
           <section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -593,7 +730,7 @@ export function CafinoOnlineApp() {
                   return (
                     <button
                       key={key}
-                      className={`flex aspect-square items-center justify-center rounded-xl text-sm ${dayLogs.length > 0 ? "bg-[var(--cafino-surface-2)]" : isToday ? "bg-[var(--cafino-soft-strong)] font-semibold" : "bg-[var(--cafino-surface-2)]"} ${selectedDate === key ? "ring-2 ring-[var(--cafino-accent)]" : ""}`}
+                      className={`flex aspect-square items-center justify-center rounded-full text-sm ${dayLogs.length > 0 ? "bg-[var(--cafino-surface-2)]" : isToday ? "bg-[var(--cafino-soft-strong)] font-semibold" : "bg-[var(--cafino-surface-2)]"} ${selectedDate === key ? "ring-2 ring-[var(--cafino-accent)]" : ""}`}
                       onClick={() => {
                         setSelectedDate(key);
                         if (dayLogs.length > 0) {
@@ -606,8 +743,10 @@ export function CafinoOnlineApp() {
                     >
                       {dayLogs.length > 0 ? (
                         last?.photo ? (
-                          <Image src={last.photo} className="h-full w-full rounded-xl object-cover" alt="Coffee" width={56} height={56} unoptimized />
-                        ) : info.emoji
+                          <Image src={last.photo} className="h-full w-full rounded-full object-cover" alt="Coffee" width={56} height={56} unoptimized />
+                        ) : (
+                          <DrinkTypeIcon type={info} size={28} className="h-7 w-7 object-contain" />
+                        )
                       ) : day}
                     </button>
                   );
@@ -658,11 +797,13 @@ export function CafinoOnlineApp() {
                     {entry.photo ? (
                       <Image src={entry.photo} className="h-14 w-14 rounded-xl object-cover" alt="Coffee" width={56} height={56} unoptimized />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--cafino-surface-2)] text-2xl">{typeInfo.emoji}</div>
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--cafino-surface-2)]">
+                        <DrinkTypeIcon type={typeInfo} size={42} className="h-10 w-10 object-contain" />
+                      </div>
                     )}
                     <div className="flex-1">
                       <p className="font-semibold">{entry.name || typeInfo.label}</p>
-                      <p className="text-xs text-[var(--cafino-text-muted)]">{entry.temp === "Hot" ? "🔥" : "🧊"} {entry.size} · {formatTime(entry.createdAt)}</p>
+                      <p className="text-xs text-[var(--cafino-text-muted)]">{entry.temp} · {entry.size} · {formatTime(entry.createdAt)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-2xl">{entry.caffeine}</p>
@@ -733,7 +874,10 @@ export function CafinoOnlineApp() {
                         unoptimized
                       />
                     ) : (
-                      (COFFEE_TYPES.find((item) => item.id === statsTopLog?.type)?.emoji ?? "☕")
+                      (() => {
+                        const fallbackType = COFFEE_TYPES.find((item) => item.id === statsTopLog?.type) ?? COFFEE_TYPES[0];
+                        return <DrinkTypeIcon type={fallbackType} size={108} className="h-28 w-28 object-contain" />;
+                      })()
                     )}
                   </div>
                 </button>
@@ -807,24 +951,6 @@ export function CafinoOnlineApp() {
           <section>
             <h2 className="cafino-title-xl mb-3 text-[var(--cafino-text)]">Settings</h2>
 
-            <div className="mb-3 grid grid-cols-1 gap-3">
-              <button
-                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
-                onClick={() => setShowTypeSheet(true)}
-              >
-                <p className="text-2xl font-semibold leading-none text-[var(--cafino-text)] sm:text-3xl">Drink</p>
-                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Tap to edit drink type</p>
-              </button>
-
-              <button
-                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
-                onClick={() => setShowWidgetsSheet(true)}
-              >
-                <p className="text-2xl font-semibold leading-none text-[var(--cafino-text)] sm:text-3xl">Widgets</p>
-                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">See how to add Cafino widget to your home screen</p>
-              </button>
-            </div>
-
             <div className="cafino-surface mb-3 rounded-[30px] border border-[var(--cafino-border)] bg-white p-4 sm:p-5">
               <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Daily Caffeine Limit</p>
               <div className="mt-4 flex items-center gap-4">
@@ -842,7 +968,55 @@ export function CafinoOnlineApp() {
               <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">FDA recommends 400mg per day for healthy adults</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mb-3 grid grid-cols-2 gap-3">
+              <button
+                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
+                onClick={() => setShowThemeSheet(true)}
+              >
+                <p className="text-2xl font-semibold leading-none sm:text-3xl">Color Theme</p>
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-sm text-[var(--cafino-text-muted)] sm:text-base">{activeThemeChoice.emoji} {activeThemeChoice.label}</p>
+                  <span className="h-10 w-10 rounded-full" style={{ backgroundColor: activeThemeChoice.accent }} />
+                </div>
+              </button>
+
+              <label className="cafino-surface cursor-pointer rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5">
+                <p className="text-2xl font-semibold leading-none sm:text-3xl">Wallpaper</p>
+                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Tap to upload a wallpaper</p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => onWallpaperChange(event.target.files?.[0])}
+                />
+                {wallpaper ? (
+                  <>
+                    <Image src={wallpaper} alt="Wallpaper" width={220} height={90} className="mt-3 h-20 w-full rounded-2xl object-cover" unoptimized />
+                    <button
+                      type="button"
+                      className="mt-3 rounded-xl border border-[var(--cafino-border)] px-3 py-2 text-sm font-medium text-[var(--cafino-text-soft)]"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setWallpaper(null);
+                      }}
+                    >
+                      Remove wallpaper
+                    </button>
+                  </>
+                ) : (
+                  <p className="mt-4 text-sm text-[var(--cafino-text-muted)] sm:text-base">No wallpaper selected</p>
+                )}
+              </label>
+
+              <button
+                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
+                onClick={() => setShowWidgetsSheet(true)}
+              >
+                <p className="text-2xl font-semibold leading-none text-[var(--cafino-text)] sm:text-3xl">Widgets</p>
+                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">See how to add Cafino widget to your home screen</p>
+              </button>
+
               <div className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 sm:p-5">
                 <p className="text-2xl font-semibold leading-none sm:text-3xl">Share Cards</p>
                 <div className="mt-4 flex items-center justify-between">
@@ -855,46 +1029,24 @@ export function CafinoOnlineApp() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
+                onClick={() => setShowBrandSheet(true)}
+              >
+                <p className="truncate text-xl font-semibold leading-none sm:text-2xl">Brand Management</p>
+                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Manage custom brands</p>
+              </button>
 
               <button
                 className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
-                onClick={() => setShowThemeSheet(true)}
+                onClick={() => setShowDeveloperSheet(true)}
               >
-                <p className="text-2xl font-semibold leading-none sm:text-3xl">Color Theme</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-[var(--cafino-text-muted)] sm:text-base">{activeThemeChoice.emoji} {activeThemeChoice.label}</p>
-                  <span className="h-10 w-10 rounded-full" style={{ backgroundColor: activeThemeChoice.accent }} />
-                </div>
+                <p className="truncate text-xl font-semibold leading-none sm:text-2xl">About Developer</p>
+                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Info, feedback, and support</p>
               </button>
-
-              <div className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 sm:p-5">
-                <p className="truncate text-2xl font-semibold leading-none sm:text-3xl">Brand Management</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <p className="text-sm text-[var(--cafino-text-muted)] sm:text-base">Enable</p>
-                  <button
-                    className={`h-10 w-16 rounded-full ${brandManage ? "bg-[var(--cafino-accent)]" : "bg-[var(--cafino-soft-alt)]"}`}
-                    onClick={() => setBrandManage(!brandManage)}
-                  >
-                    <span className={`block h-8 w-8 rounded-full bg-white transition-transform ${brandManage ? "translate-x-7" : "translate-x-1"}`} />
-                  </button>
-                </div>
-              </div>
-
-              <label className="cafino-surface cursor-pointer rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5">
-                <p className="text-2xl font-semibold leading-none sm:text-3xl">Wallpaper</p>
-                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Tap to upload a wallpaper</p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => onWallpaperChange(event.target.files?.[0])}
-                />
-                {wallpaper ? (
-                  <Image src={wallpaper} alt="Wallpaper" width={220} height={90} className="mt-3 h-20 w-full rounded-2xl object-cover" unoptimized />
-                ) : (
-                  <p className="mt-4 text-sm text-[var(--cafino-text-muted)] sm:text-base">No wallpaper selected</p>
-                )}
-              </label>
             </div>
           </section>
         )}
@@ -964,32 +1116,209 @@ export function CafinoOnlineApp() {
         </div>
       )}
 
-      {showTypeSheet && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-2">
-          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl duration-300 sm:max-w-[720px]" style={{ backgroundColor: activeThemeChoice.soft }}>
-            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] px-4 py-3" style={{ backgroundColor: activeThemeChoice.soft }}>
-              <button className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl" onClick={() => setShowTypeSheet(false)}>Cancel</button>
-              <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Drink Type</p>
-              <span className="w-12" />
+      {showBrandSheet && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-3xl bg-[#efeeec] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-[#efeeec] px-4 py-3 sm:px-5">
+              <button className="text-2xl text-[var(--cafino-text-muted)]" onClick={() => setShowBrandSheet(false)}>Cancel</button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Brand Management</p>
+              <span className="w-16" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-4 min-[420px]:grid-cols-3">
-              {COFFEE_TYPES.map((item) => {
-                const selected = preferredType === item.id;
-                return (
+            <div className="p-5">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <button
+                  className="flex h-40 flex-col items-center justify-center rounded-[28px] border border-[var(--cafino-border)] bg-white"
+                  onClick={() => {
+                    resetBrandDraft();
+                    setShowAddBrandSheet(true);
+                  }}
+                >
+                  <Plus size={46} className="text-[var(--cafino-text-soft)]" />
+                  <p className="mt-2 text-2xl font-medium text-[var(--cafino-text)]">Others</p>
+                </button>
+
+                {brands.map((brand) => (
+                  <div key={brand.id} className="flex h-40 flex-col items-center justify-center rounded-[28px] border border-[var(--cafino-border)] bg-white p-3 text-center">
+                    {brand.logo ? (
+                      <Image src={brand.logo} alt={brand.name} width={64} height={64} className="h-16 w-16 rounded-2xl object-cover" unoptimized />
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--cafino-soft-alt)] text-2xl font-semibold text-[var(--cafino-text-soft)]">
+                        {brand.name.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <p className="mt-2 line-clamp-1 text-lg font-medium text-[var(--cafino-text)]">{brand.name}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddBrandSheet && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-3xl bg-[#efeeec] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-[#efeeec] px-4 py-3 sm:px-5">
+              <button
+                className="text-2xl text-[var(--cafino-text-muted)]"
+                onClick={() => {
+                  setShowAddBrandSheet(false);
+                  resetBrandDraft();
+                }}
+              >
+                Cancel
+              </button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Add Brand</p>
+              <button
+                className="text-2xl font-medium text-[var(--cafino-accent-strong)] disabled:opacity-40"
+                onClick={onSaveBrand}
+                disabled={!brandDraft.name.trim()}
+              >
+                Save
+              </button>
+            </div>
+
+            <div className="space-y-5 p-4 sm:p-5">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-sm font-medium uppercase tracking-[0.12em] text-[var(--cafino-text-muted)]">Logo</p>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-medium uppercase tracking-[0.12em] text-[var(--cafino-text-muted)]">Cutout</p>
                   <button
-                    key={item.id}
-                    className={`rounded-3xl border p-4 text-center ${selected ? "border-[var(--cafino-accent)] bg-[var(--cafino-surface-2)]" : "border-[var(--cafino-border)] bg-white"}`}
-                    onClick={() => {
-                      setPreferredType(item.id);
-                      setShowTypeSheet(false);
-                    }}
+                    className={`h-9 w-16 rounded-full ${brandDraft.cutout ? "bg-[var(--cafino-accent)]" : "bg-[var(--cafino-soft-alt)]"}`}
+                    onClick={() => setBrandDraft((prev) => ({ ...prev, cutout: !prev.cutout }))}
                   >
-                    <div className="text-4xl sm:text-5xl">{item.emoji}</div>
-                    <p className="mt-2 text-sm font-medium text-[var(--cafino-text)] sm:mt-3 sm:text-base">{item.label}</p>
+                    <span className={`block h-8 w-8 rounded-full bg-white transition-transform ${brandDraft.cutout ? "translate-x-6" : "translate-x-0.5"}`} />
                   </button>
-                );
-              })}
+                </div>
+              </div>
+
+              <label className="block cursor-pointer rounded-3xl bg-white p-4">
+                <div className="rounded-[28px] border-2 border-dashed border-[var(--cafino-border)] p-10 text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#9a855f]">
+                    <Camera size={30} />
+                  </div>
+                  <p className="text-3xl font-medium text-[var(--cafino-text-soft)]">Add Photo</p>
+                  <p className="mt-1 text-lg text-[var(--cafino-text-muted)]">Brand Logo</p>
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={(event) => onBrandLogoChange(event.target.files?.[0])} />
+              </label>
+
+              {brandDraft.logo ? (
+                <Image src={brandDraft.logo} alt="Brand logo" width={400} height={160} className="h-28 w-full rounded-3xl object-cover" unoptimized />
+              ) : null}
+
+              <div className="rounded-3xl bg-white p-4">
+                <label className="mb-4 block">
+                  <p className="mb-2 text-2xl font-medium text-[var(--cafino-text)]">Name</p>
+                  <input
+                    className="w-full rounded-2xl border border-[var(--cafino-border)] px-4 py-3 text-xl"
+                    placeholder="eg. Starbucks"
+                    value={brandDraft.name}
+                    onChange={(event) => setBrandDraft((prev) => ({ ...prev, name: event.target.value }))}
+                  />
+                </label>
+
+                <label className="block">
+                  <p className="mb-2 text-2xl font-medium text-[var(--cafino-text)]">Order</p>
+                  <input
+                    type="number"
+                    className="w-full rounded-2xl border border-[var(--cafino-border)] px-4 py-3 text-xl"
+                    placeholder="eg. 0, 99"
+                    value={brandDraft.order}
+                    onChange={(event) => setBrandDraft((prev) => ({ ...prev, order: event.target.value }))}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeveloperSheet && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-3xl bg-[#efeeec] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-[#efeeec] px-4 py-3 sm:px-5">
+              <button className="text-2xl text-[var(--cafino-text-muted)]" onClick={() => setShowDeveloperSheet(false)}>Cancel</button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)]">About Developer</p>
+              <span className="w-16" />
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-5">
+              <section className="rounded-3xl bg-white p-4 sm:p-5">
+                <div className="flex items-center gap-4">
+                  <Image src="/download.png" alt="Developer" width={72} height={72} className="h-18 w-18 rounded-2xl object-cover" unoptimized />
+                  <div>
+                    <p className="text-2xl font-semibold text-[var(--cafino-text)]">{DEV_NAME}</p>
+                    <p className="mt-1 text-sm text-[var(--cafino-text-muted)]">Zentari</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-2xl bg-[var(--cafino-soft-alt)] p-3">
+                    <p className="font-medium text-[var(--cafino-text-soft)]">Role</p>
+                    <p className="mt-1 text-[var(--cafino-text-muted)]">{DEV_ROLE}</p>
+                  </div>
+                  <div className="rounded-2xl bg-[var(--cafino-soft-alt)] p-3">
+                    <p className="font-medium text-[var(--cafino-text-soft)]">Location</p>
+                    <p className="mt-1 text-[var(--cafino-text-muted)]">{DEV_LOCATION}</p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <a
+                    href={`mailto:${DEV_EMAIL}`}
+                    className="inline-flex items-center justify-center rounded-2xl border border-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-[var(--cafino-accent-strong)]"
+                  >
+                    Contact me via email
+                  </a>
+                  <a
+                    href={DEV_PORTFOLIO_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-2xl bg-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Visit my portfolio
+                  </a>
+                </div>
+              </section>
+
+              <section className="rounded-3xl bg-white p-4 sm:p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <MessageCircle className="text-[var(--cafino-accent)]" size={18} />
+                  <p className="text-xl font-semibold text-[var(--cafino-text)]">Feedback</p>
+                </div>
+                <textarea
+                  value={feedbackText}
+                  onChange={(event) => {
+                    setFeedbackText(event.target.value);
+                    if (feedbackSent) {
+                      setFeedbackSent(false);
+                    }
+                  }}
+                  placeholder="Tell me what to improve, what you love, and what you want next..."
+                  className="min-h-28 w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3"
+                />
+                {feedbackSent ? <p className="mt-2 text-sm text-[var(--cafino-accent-strong)]">Thanks! Your email draft was prepared.</p> : null}
+                <button className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-white" onClick={onSendFeedback}>
+                  <SendHorizontal size={16} /> Send Feedback
+                </button>
+              </section>
+
+              <section className="rounded-3xl bg-white p-4 sm:p-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <Heart className="text-[var(--cafino-accent)]" size={18} />
+                  <p className="text-xl font-semibold text-[var(--cafino-text)]">Buy Me a Matcha</p>
+                </div>
+                <p className="text-sm text-[var(--cafino-text-muted)]">If Cafino helps your daily routine, you can support development with a small donation.</p>
+                <a
+                  href={DONATION_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-[var(--cafino-accent-strong)]"
+                >
+                  <UserRound size={16} /> Donate
+                </a>
+                <p className="mt-2 text-xs text-[var(--cafino-text-subtle)]">Replace donation link in code when your final page is ready.</p>
+              </section>
             </div>
           </div>
         </div>
@@ -1106,7 +1435,9 @@ export function CafinoOnlineApp() {
                     {entry.photo ? (
                       <Image src={entry.photo} className="h-14 w-14 rounded-xl object-cover" alt="Coffee" width={56} height={56} unoptimized />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--cafino-surface-2)] text-2xl">{typeInfo.emoji}</div>
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--cafino-surface-2)]">
+                        <DrinkTypeIcon type={typeInfo} size={42} className="h-10 w-10 object-contain" />
+                      </div>
                     )}
                     <div className="flex-1">
                       <p className="font-semibold">{entry.name || typeInfo.label}</p>
@@ -1193,7 +1524,9 @@ export function CafinoOnlineApp() {
                   <div className="flex gap-2">
                   {COFFEE_TYPES.map((item) => (
                     <button key={item.id} className={`min-w-[86px] rounded-xl border px-2 py-2 text-xs ${draft.type === item.id ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-surface-2)]" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => onTypeChange(item.id as CoffeeTypeId)}>
-                      <div className="text-lg">{item.emoji}</div>
+                      <div className="mb-1 flex items-center justify-center">
+                        <DrinkTypeIcon type={item} size={26} className="h-6 w-6 object-contain" />
+                      </div>
                       {item.label}
                     </button>
                   ))}
@@ -1208,8 +1541,8 @@ export function CafinoOnlineApp() {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <button className={`rounded-xl border px-2 py-2 ${draft.temp === "Iced" ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-accent-strong)] text-white" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => setDraft((prev) => ({ ...prev, temp: "Iced" as TempOption }))}>🧊 Iced</button>
-                <button className={`rounded-xl border px-2 py-2 ${draft.temp === "Hot" ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-accent-strong)] text-white" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => setDraft((prev) => ({ ...prev, temp: "Hot" as TempOption }))}>🔥 Hot</button>
+                <button className={`rounded-xl border px-2 py-2 ${draft.temp === "Iced" ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-accent-strong)] text-white" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => setDraft((prev) => ({ ...prev, temp: "Iced" as TempOption }))}>Iced</button>
+                <button className={`rounded-xl border px-2 py-2 ${draft.temp === "Hot" ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-accent-strong)] text-white" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => setDraft((prev) => ({ ...prev, temp: "Hot" as TempOption }))}>Hot</button>
               </div>
 
               <label className="block text-xl text-[var(--cafino-text-muted)]">Caffeine: <span className="font-semibold text-[var(--cafino-accent-strong)]">{draft.caffeine} mg</span></label>

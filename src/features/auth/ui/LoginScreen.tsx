@@ -70,12 +70,12 @@ export function LoginScreen() {
         backgroundImage: `radial-gradient(circle at 0% 0%, color-mix(in oklab, ${activeThemeChoice.accent} 20%, white), ${activeThemeChoice.soft} 45%, color-mix(in oklab, ${activeThemeChoice.soft} 82%, #ddd))`,
       }}
     >
-      <section className="app-card animate-in fade-in duration-300 p-5 sm:p-6">
+      <section className="app-card animate-in fade-in duration-300 p-4 sm:p-5">
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--cafino-accent)]">Cafino</p>
         <h1 className="app-title mt-2 text-[var(--cafino-text)]">Welcome back</h1>
         <p className="app-copy mt-2">Sign in to view your coffee trends and daily intake insights.</p>
 
-        <form className="mt-5 space-y-4" onSubmit={onSubmit}>
+        <form className="mt-4 space-y-3.5" onSubmit={onSubmit}>
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-[var(--cafino-text-soft)]">Email</span>
             <input

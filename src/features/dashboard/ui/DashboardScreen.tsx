@@ -79,30 +79,30 @@ export function DashboardScreen() {
 
   return (
     <main
-      className="app-shell flex flex-col gap-4"
+      className="app-shell flex flex-col gap-3.5"
       style={{
         ...themeVars,
         backgroundImage: `radial-gradient(circle at 85% 5%, color-mix(in oklab, ${activeThemeChoice.accent} 22%, white), ${activeThemeChoice.soft} 42%, color-mix(in oklab, ${activeThemeChoice.soft} 82%, #ddd))`,
       }}
     >
-      <header className="app-card animate-in fade-in duration-300 p-5 sm:p-6">
+      <header className="app-card animate-in fade-in duration-300 p-4 sm:p-5">
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--cafino-accent)]">Coffee Dashboard</p>
         <h1 className="app-title mt-2 text-[var(--cafino-text)]">Your progress today</h1>
         <p className="app-copy mt-2">All stats update from your local Cafino records in real time.</p>
       </header>
 
       <section className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
-        <article className="app-card p-4">
+        <article className="app-card p-3.5 sm:p-4">
           <p className="text-sm text-[var(--cafino-text-muted)]">Total Cups</p>
           <p className="mt-1 text-2xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-3xl sm:text-4xl">{stats.totalLogs}</p>
         </article>
-        <article className="app-card p-4">
+        <article className="app-card p-3.5 sm:p-4">
           <p className="text-sm text-[var(--cafino-text-muted)]">This Month</p>
           <p className="mt-1 text-2xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-3xl sm:text-4xl">{stats.monthlyLogs}</p>
         </article>
       </section>
 
-      <section className="app-card p-4 sm:p-5">
+      <section className="app-card p-3.5 sm:p-4">
         <div className="mb-2 flex items-center justify-between text-sm text-[var(--cafino-text-muted)]">
           <span>Daily Caffeine</span>
           <span>{stats.todayCaffeine} mg</span>
@@ -113,15 +113,15 @@ export function DashboardScreen() {
       </section>
 
       <section className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
-        <button className="app-card flex items-center justify-between p-4 text-left" onClick={() => onContinueTracking("home")}>
+        <button className="app-card flex items-center justify-between p-3.5 sm:p-4 text-left" onClick={() => onContinueTracking("home")}>
           <span className="font-medium text-[var(--cafino-text-soft)]">Track Cups</span>
           <Coffee size={18} className="text-[var(--cafino-accent-strong)]" />
         </button>
-        <button className="app-card flex items-center justify-between p-4 text-left" onClick={() => onContinueTracking("stats")}>
+        <button className="app-card flex items-center justify-between p-3.5 sm:p-4 text-left" onClick={() => onContinueTracking("stats")}>
           <span className="font-medium text-[var(--cafino-text-soft)]">View Stats</span>
           <Flame size={18} className="text-[var(--cafino-accent-strong)]" />
         </button>
-        <button className="app-card flex items-center justify-between p-4 text-left" onClick={() => onContinueTracking("settings")}>
+        <button className="app-card flex items-center justify-between p-3.5 sm:p-4 text-left" onClick={() => onContinueTracking("settings")}>
           <span className="font-medium text-[var(--cafino-text-soft)]">Preferences</span>
           <Settings2 size={18} className="text-[var(--cafino-accent-strong)]" />
         </button>
