@@ -11,15 +11,15 @@
   "lang": "en",
   "icons": [
     {
-      "src": "/download.jpg",
+      "src": "/download.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/download.jpg",
+      "src": "/download.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

@@ -1,10 +1,10 @@
-const CACHE_NAME = "cafino-pwa-v1";
+const CACHE_NAME = "cafino-pwa-v3";
 const OFFLINE_URL = "/offline.html";
-const APP_SHELL = ["/", "/login", "/dashboard", "/manifest.webmanifest", OFFLINE_URL, "/download.jpg"];
+const STATIC_ASSETS = ["/manifest.webmanifest", OFFLINE_URL, "/download.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
@@ -22,6 +22,12 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
     return;
@@ -33,18 +39,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Never cache Next.js build artifacts or service worker script itself.
+  // Mixing versions here is a common source of hydration mismatches.
+  if (requestUrl.pathname.startsWith("/_next/") || requestUrl.pathname === "/sw.js") {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          const cloned = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
-          return response;
-        })
+        .then((response) => response)
         .catch(async () => {
           const cache = await caches.open(CACHE_NAME);
-          const cached = await cache.match(event.request);
-          return cached || cache.match(OFFLINE_URL);
+          return cache.match(OFFLINE_URL);
         })
     );
     return;
@@ -52,10 +60,7 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(event.request)
+      const networkFetch = fetch(event.request)
         .then((response) => {
           if (!response || response.status !== 200 || response.type !== "basic") {
             return response;
@@ -64,7 +69,9 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
           return response;
         })
-        .catch(() => caches.match("/download.jpg"));
+        .catch(() => cached || caches.match("/download.png"));
+
+      return cached || networkFetch;
     })
   );
 });

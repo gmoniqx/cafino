@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { BarChart3, ChevronLeft, ChevronRight, Coffee, Plus, Settings, Share } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, Coffee, Hand, Plus, Search, Settings, Share, SquarePen } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
@@ -118,12 +118,12 @@ export function CafinoOnlineApp() {
   const [showDateDetail, setShowDateDetail] = useState(false);
   const [showTypeSheet, setShowTypeSheet] = useState(false);
   const [showThemeSheet, setShowThemeSheet] = useState(false);
+  const [showWidgetsSheet, setShowWidgetsSheet] = useState(false);
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [statsYear, setStatsYear] = useState(new Date().getFullYear());
   const [statsMonth, setStatsMonth] = useState(new Date().getMonth());
   const [statsPeriod, setStatsPeriod] = useState<StatsPeriod>("week");
-  const [motionEnabled, setMotionEnabled] = useState(false);
   const [cupMotion, setCupMotion] = useState({ x: 0, y: 0 });
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
@@ -277,43 +277,28 @@ export function CafinoOnlineApp() {
   }, []);
 
   useEffect(() => {
-    if (!motionEnabled || typeof window === "undefined") {
+    if (typeof window === "undefined" || activeTab !== "stats" || statsLogs.length === 0) {
       return;
     }
 
-    const handleDeviceOrientation = (event: DeviceOrientationEvent) => {
-      const gamma = event.gamma ?? 0;
-      const beta = event.beta ?? 0;
+    let frameId = 0;
+    const start = performance.now();
 
-      const x = Math.max(-14, Math.min(14, (gamma / 30) * 12));
-      const y = Math.max(-10, Math.min(10, (beta / 45) * 8));
-
+    const animate = (now: number) => {
+      const elapsed = (now - start) / 1000;
+      const x = Math.sin(elapsed * 1.25) * 7;
+      const y = Math.cos(elapsed * 1.7) * 4;
       setCupMotion({ x, y });
+      frameId = window.requestAnimationFrame(animate);
     };
 
-    window.addEventListener("deviceorientation", handleDeviceOrientation, true);
-    return () => window.removeEventListener("deviceorientation", handleDeviceOrientation, true);
-  }, [motionEnabled]);
+    frameId = window.requestAnimationFrame(animate);
 
-  const enableMotion = async () => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    type IOSDeviceOrientationEvent = typeof DeviceOrientationEvent & {
-      requestPermission?: () => Promise<"granted" | "denied">;
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      setCupMotion({ x: 0, y: 0 });
     };
-
-    const orientationType = DeviceOrientationEvent as IOSDeviceOrientationEvent;
-    if (orientationType.requestPermission) {
-      const permission = await orientationType.requestPermission();
-      if (permission !== "granted") {
-        return;
-      }
-    }
-
-    setMotionEnabled(true);
-  };
+  }, [activeTab, statsLogs.length]);
 
   const onStatsMonthShift = (direction: -1 | 1) => {
     const nextMonth = statsMonth + direction;
@@ -503,16 +488,18 @@ export function CafinoOnlineApp() {
 
   if (!started) {
     return (
-      <main className="cafino-app cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-4 sm:p-6" style={themeVars}>
+      <main className="cafino-app cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-3.5 sm:p-5" style={themeVars}>
         <div className="mb-6 mt-6 flex flex-col items-center">
-          <div className="mb-6 flex h-28 w-28 items-center justify-center rounded-[30px] bg-[var(--cafino-accent)] text-5xl shadow-md sm:h-36 sm:w-36 sm:text-6xl">☕</div>
+          <div className="mb-6 h-28 w-28 overflow-hidden rounded-[30px] bg-white shadow-md sm:h-36 sm:w-36">
+            <Image src="/download.png" alt="Cafino logo" width={144} height={144} className="h-full w-full object-cover" priority />
+          </div>
           <h1 className="cafino-title-xl text-[var(--cafino-text)]">Cafino</h1>
           <p className="cafino-text-md mt-2 text-[var(--cafino-text-muted)]">Record your coffee journey</p>
         </div>
 
-        <div className="flex flex-1 flex-col gap-3">
+        <div className="flex flex-1 flex-col gap-2.5 sm:gap-3">
           {["Minimalist Design", "Coffee Calendar", "Coffee Statistics", "Card Sharing"].map((title, idx) => (
-            <div key={title} className="cafino-surface rounded-3xl border border-[var(--cafino-border)] bg-white p-4 sm:p-5">
+            <div key={title} className="cafino-surface rounded-3xl border border-[var(--cafino-border)] bg-white p-3.5 sm:p-4">
               <p className="cafino-title-lg text-[var(--cafino-text)]">{title}</p>
               <p className="cafino-text-md mt-1 text-[var(--cafino-text-muted)]">{idx === 0 ? "Simple style to record every cup of coffee" : idx === 1 ? "Calendar statistics, clear and easy to browse" : idx === 2 ? "Multi-dimensional statistics by week, month, year" : "Beautiful coffee cards to share"}</p>
             </div>
@@ -551,7 +538,7 @@ export function CafinoOnlineApp() {
 
   return (
     <main className="cafino-app cafino-frame flex w-full flex-col bg-[var(--cafino-soft)]" style={themeVars}>
-      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-4 sm:px-5">
+      <div className="flex-1 overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
         {activeTab === "home" && (
           <section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -589,7 +576,7 @@ export function CafinoOnlineApp() {
               </div>
             </div>
 
-            <div className="cafino-surface mb-4 rounded-2xl bg-white p-4">
+            <div className="cafino-surface mb-3.5 rounded-2xl bg-white p-3.5 sm:p-4">
               <div className="mb-2 grid grid-cols-7 text-center text-xs text-[var(--cafino-text-muted)]">
                 <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
               </div>
@@ -628,13 +615,13 @@ export function CafinoOnlineApp() {
               </div>
             </div>
 
-            <button className="mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--cafino-accent)] text-base font-semibold text-white sm:h-14 sm:text-lg" onClick={() => openAdd(selectedDate)}>
-              <Plus size={24} /> {logsForSelectedDay.length > 0 ? "Edit Cup" : "Add a Cup"}
+            <button className="mb-3.5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--cafino-accent)] text-base font-semibold text-white sm:h-12 sm:text-lg" onClick={() => openAdd(selectedDate)}>
+              <Plus size={24} /> {logsForSelectedDay.length > 0 ? "Edit Cup" : "Add Cup"}
             </button>
 
-            <h3 className="mb-2 text-lg font-bold min-[360px]:text-xl sm:text-2xl">Today Coffee</h3>
-            <div className="cafino-surface mb-3 rounded-2xl bg-white p-4">
-              <p className="text-sm text-[var(--cafino-text-muted)]">Today caffeine</p>
+            <h3 className="mb-2 text-lg font-bold min-[360px]:text-xl sm:text-2xl">Today's drink</h3>
+            <div className="cafino-surface mb-3 rounded-2xl bg-white p-3.5 sm:p-4">
+              <p className="text-sm text-[var(--cafino-text-muted)]">Caffeine</p>
               <div className="my-2 h-1.5 rounded-full bg-[var(--cafino-soft-alt)]">
                 <div className="h-1.5 rounded-full bg-[var(--cafino-accent-strong)]" style={{ width: `${Math.min(100, (todayCaf / cafLimit) * 100)}%` }} />
               </div>
@@ -642,7 +629,7 @@ export function CafinoOnlineApp() {
             </div>
 
             {todayLogs.length === 0 ? (
-              <div className="cafino-surface rounded-2xl bg-white p-4 text-sm text-[var(--cafino-text-muted)]">No coffee logged today ☕</div>
+              <div className="cafino-surface rounded-2xl bg-white p-4 text-sm text-[var(--cafino-text-muted)]">Nothing logged today ☕</div>
             ) : null}
 
             {todayLogs.map((entry) => {
@@ -728,13 +715,12 @@ export function CafinoOnlineApp() {
 
                 <button
                   className="relative mb-4 flex h-52 w-full items-end justify-end overflow-hidden rounded-3xl bg-white p-4"
-                  onClick={enableMotion}
                 >
                   <div
                     className="pointer-events-none select-none text-7xl"
                     style={{
                       transform: `translate3d(${cupMotion.x}px, ${cupMotion.y}px, 0)`,
-                      transition: "transform 850ms cubic-bezier(0.22, 0.61, 0.36, 1)",
+                      transition: "transform 180ms ease-out",
                     }}
                   >
                     {statsTopLog?.photo ? (
@@ -826,8 +812,16 @@ export function CafinoOnlineApp() {
                 className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
                 onClick={() => setShowTypeSheet(true)}
               >
-                <p className="text-2xl font-semibold leading-none text-[var(--cafino-text)] sm:text-3xl">Coffee Type</p>
-                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Tap to edit coffee type</p>
+                <p className="text-2xl font-semibold leading-none text-[var(--cafino-text)] sm:text-3xl">Drink</p>
+                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Tap to edit drink type</p>
+              </button>
+
+              <button
+                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
+                onClick={() => setShowWidgetsSheet(true)}
+              >
+                <p className="text-2xl font-semibold leading-none text-[var(--cafino-text)] sm:text-3xl">Widgets</p>
+                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">See how to add Cafino widget to your home screen</p>
               </button>
             </div>
 
@@ -918,12 +912,64 @@ export function CafinoOnlineApp() {
         </button>
       </nav>
 
+      {showWidgetsSheet && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-3xl bg-[#efeeec] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-[#efeeec] px-4 py-3 sm:px-5">
+              <button className="text-2xl text-[var(--cafino-text-muted)]" onClick={() => setShowWidgetsSheet(false)}>Cancel</button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Add Widgets</p>
+              <span className="w-16" />
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-5">
+              <p className="text-2xl leading-tight text-[var(--cafino-text)] sm:text-3xl">Follow these steps to add 'Cafino' to your home screen</p>
+
+              <article className="rounded-3xl bg-white/85 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#9a855f]">
+                    <Hand size={22} />
+                  </span>
+                  <div>
+                    <h3 className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Long press home screen</h3>
+                    <p className="mt-2 text-[1.25rem] leading-snug text-[var(--cafino-text-muted)] sm:text-[1.35rem]">Long press on an empty area of home screen until app icons start shaking</p>
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-3xl bg-white/85 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#9a855f]">
+                    <SquarePen size={22} />
+                  </span>
+                  <div>
+                    <h3 className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Tap 'Edit' {"->"} 'Add Widget'</h3>
+                    <p className="mt-2 text-[1.25rem] leading-snug text-[var(--cafino-text-muted)] sm:text-[1.35rem]">Tap 'Edit' on top left, then select 'Add Widget'</p>
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-3xl bg-white/85 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#9a855f]">
+                    <Search size={22} />
+                  </span>
+                  <div>
+                    <h3 className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Search for 'Cafino'</h3>
+                    <p className="mt-2 text-[1.25rem] leading-snug text-[var(--cafino-text-muted)] sm:text-[1.35rem]">Type 'Cafino' in search box, find and add the widget</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTypeSheet && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-2">
           <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl duration-300 sm:max-w-[720px]" style={{ backgroundColor: activeThemeChoice.soft }}>
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] px-4 py-3" style={{ backgroundColor: activeThemeChoice.soft }}>
               <button className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl" onClick={() => setShowTypeSheet(false)}>Cancel</button>
-              <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Coffee Type</p>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Drink Type</p>
               <span className="w-12" />
             </div>
 
@@ -1047,7 +1093,7 @@ export function CafinoOnlineApp() {
                 openAdd(selectedDate);
               }}
             >
-              <Plus size={24} /> Add a Cup
+              <Plus size={24} /> 
             </button>
 
             {logsForSelectedDay.length === 0 ? (
@@ -1084,7 +1130,7 @@ export function CafinoOnlineApp() {
           <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300 sm:max-w-[720px]">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-4 py-3">
               <button onClick={() => setShowAdd(false)} className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl">Cancel</button>
-              <p className="text-2xl font-semibold sm:text-3xl">Add Coffee</p>
+              <p className="text-2xl font-semibold sm:text-3xl">Add Cup</p>
               <button onClick={onSave} className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl">Save</button>
             </div>
 
@@ -1133,7 +1179,7 @@ export function CafinoOnlineApp() {
 
               <div className="flex items-center justify-between rounded-2xl border border-[var(--cafino-border)] bg-white p-4">
                 <div>
-                  <p className="text-2xl font-semibold">Homemade Coffee</p>
+                  <p className="text-2xl font-semibold">Homemade</p>
                   <p className="text-sm text-[var(--cafino-text-muted)]">Record beans & brewing details</p>
                 </div>
                 <button className={`h-8 w-14 rounded-full ${draft.homemade ? "bg-[var(--cafino-accent-strong)]" : "bg-[var(--cafino-soft-alt)]"}`} onClick={() => setDraft((prev) => ({ ...prev, homemade: !prev.homemade }))}>
@@ -1142,7 +1188,7 @@ export function CafinoOnlineApp() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Coffee Type</label>
+                <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Drink Type</label>
                 <div className="overflow-x-auto pb-1">
                   <div className="flex gap-2">
                   {COFFEE_TYPES.map((item) => (
