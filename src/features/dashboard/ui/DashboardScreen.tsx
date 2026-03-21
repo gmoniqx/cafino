@@ -91,14 +91,14 @@ export function DashboardScreen() {
         <p className="app-copy mt-2">All stats update from your local Cafino records in real time.</p>
       </header>
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
         <article className="app-card p-4">
           <p className="text-sm text-[var(--cafino-text-muted)]">Total Cups</p>
-          <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent-strong)] sm:text-4xl">{stats.totalLogs}</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-3xl sm:text-4xl">{stats.totalLogs}</p>
         </article>
         <article className="app-card p-4">
           <p className="text-sm text-[var(--cafino-text-muted)]">This Month</p>
-          <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent-strong)] sm:text-4xl">{stats.monthlyLogs}</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-3xl sm:text-4xl">{stats.monthlyLogs}</p>
         </article>
       </section>
 
@@ -112,7 +112,7 @@ export function DashboardScreen() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <section className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
         <button className="app-card flex items-center justify-between p-4 text-left" onClick={() => onContinueTracking("home")}>
           <span className="font-medium text-[var(--cafino-text-soft)]">Track Cups</span>
           <Coffee size={18} className="text-[var(--cafino-accent-strong)]" />

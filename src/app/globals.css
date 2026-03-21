@@ -152,10 +152,20 @@
 
 @layer components {
   .app-shell {
-    width: min(100%, 430px);
+    width: min(100%, clamp(320px, 94vw, 720px));
     margin-inline: auto;
-    min-height: 100vh;
-    padding: var(--space-4);
+    min-height: 100dvh;
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+
+  .cafino-frame {
+    width: min(100%, clamp(320px, 94vw, 720px));
+    margin-inline: auto;
+    min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .app-title {

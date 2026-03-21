@@ -503,7 +503,7 @@ export function CafinoOnlineApp() {
 
   if (!started) {
     return (
-      <main className="cafino-app mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-[var(--cafino-soft)] p-4 sm:p-6" style={themeVars}>
+      <main className="cafino-app cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-4 sm:p-6" style={themeVars}>
         <div className="mb-6 mt-6 flex flex-col items-center">
           <div className="mb-6 flex h-28 w-28 items-center justify-center rounded-[30px] bg-[var(--cafino-accent)] text-5xl shadow-md sm:h-36 sm:w-36 sm:text-6xl">☕</div>
           <h1 className="cafino-title-xl text-[var(--cafino-text)]">Cafino</h1>
@@ -550,13 +550,13 @@ export function CafinoOnlineApp() {
   }
 
   return (
-    <main className="cafino-app mx-auto flex min-h-screen w-full max-w-[430px] flex-col bg-[var(--cafino-soft)]" style={themeVars}>
-      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-4">
+    <main className="cafino-app cafino-frame flex w-full flex-col bg-[var(--cafino-soft)]" style={themeVars}>
+      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-4 sm:px-5">
         {activeTab === "home" && (
           <section>
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="cafino-title-lg text-[var(--cafino-text)]">{MONTH_SHORT[calMonth]}</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 min-[360px]:gap-2">
                 <button
                   className="h-8 w-8 rounded-full border border-[var(--cafino-border)] bg-white"
                   onClick={() => {
@@ -632,7 +632,7 @@ export function CafinoOnlineApp() {
               <Plus size={24} /> {logsForSelectedDay.length > 0 ? "Edit Cup" : "Add a Cup"}
             </button>
 
-            <h3 className="mb-2 text-xl font-bold sm:text-2xl">Today Coffee</h3>
+            <h3 className="mb-2 text-lg font-bold min-[360px]:text-xl sm:text-2xl">Today Coffee</h3>
             <div className="cafino-surface mb-3 rounded-2xl bg-white p-4">
               <p className="text-sm text-[var(--cafino-text-muted)]">Today caffeine</p>
               <div className="my-2 h-1.5 rounded-full bg-[var(--cafino-soft-alt)]">
@@ -678,7 +678,7 @@ export function CafinoOnlineApp() {
                       <p className="text-xs text-[var(--cafino-text-muted)]">{entry.temp === "Hot" ? "🔥" : "🧊"} {entry.size} · {formatTime(entry.createdAt)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-[var(--cafino-accent-strong)]">{entry.caffeine}</p>
+                      <p className="text-xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-2xl">{entry.caffeine}</p>
                       <p className="text-xs text-[var(--cafino-text-muted)]">mg</p>
                     </div>
                   </div>
@@ -696,26 +696,26 @@ export function CafinoOnlineApp() {
 
         {activeTab === "stats" && (
           <section>
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="cafino-title-xl">Statistics</h2>
               <div className="flex items-center gap-2">
                 <button className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)]" onClick={() => onStatsMonthShift(-1)}>
                   <ChevronLeft size={18} className="text-[var(--cafino-text-muted)]" />
                 </button>
-                <span className="rounded-full bg-[var(--cafino-soft-alt)] px-3 py-2 text-sm text-[var(--cafino-text-soft)] sm:px-4 sm:text-base">{MONTH_SHORT[statsMonth]} {statsYear}</span>
+                <span className="rounded-full bg-[var(--cafino-soft-alt)] px-2.5 py-2 text-xs text-[var(--cafino-text-soft)] min-[360px]:px-3 min-[360px]:text-sm sm:px-4 sm:text-base">{MONTH_SHORT[statsMonth]} {statsYear}</span>
                 <button className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)]" onClick={() => onStatsMonthShift(1)}>
                   <ChevronRight size={18} className="text-[var(--cafino-text-muted)]" />
                 </button>
               </div>
             </div>
 
-            <div className="mb-4 flex items-center gap-3">
+            <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
               {(["week", "month", "year"] as StatsPeriod[]).map((p) => (
-                <button key={p} className={`rounded-full px-4 py-2 text-sm sm:px-5 sm:text-base ${statsPeriod === p ? "bg-[var(--cafino-accent)] text-white" : "bg-white text-[var(--cafino-text)]"}`} onClick={() => setStatsPeriod(p)}>
+                <button key={p} className={`rounded-full px-3 py-1.5 text-xs min-[360px]:px-4 min-[360px]:py-2 min-[360px]:text-sm sm:px-5 sm:text-base ${statsPeriod === p ? "bg-[var(--cafino-accent)] text-white" : "bg-white text-[var(--cafino-text)]"}`} onClick={() => setStatsPeriod(p)}>
                   {p[0].toUpperCase() + p.slice(1)}
                 </button>
               ))}
-              <button className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)]" onClick={onShareStats}> 
+              <button className="ml-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)]" onClick={onShareStats}>
                 <Share size={18} className="text-[var(--cafino-accent)]" />
               </button>
             </div>
@@ -755,40 +755,40 @@ export function CafinoOnlineApp() {
             )}
 
             <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
                 <div>
-                  <p className="text-base text-[var(--cafino-text)] sm:text-lg">Total Cups</p>
-                  <p className="mt-1 text-4xl font-bold text-[var(--cafino-accent)] sm:text-5xl">{statsLogs.length}</p>
+                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Cups</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.length}</p>
                 </div>
                 <div>
-                  <p className="text-base text-[var(--cafino-text)] sm:text-lg">Total Spend</p>
-                  <p className="mt-1 text-4xl font-bold text-[var(--cafino-accent)] sm:text-5xl">{statsLogs.reduce((s, l) => s + l.price, 0).toFixed(0)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-base text-[var(--cafino-text)] sm:text-lg">Total Caffeine</p>
-                  <p className="mt-1 text-4xl font-bold text-[var(--cafino-accent)] sm:text-5xl">{statsLogs.reduce((s, l) => s + l.caffeine, 0)}<span className="ml-1 text-2xl font-semibold text-[var(--cafino-text-muted)] sm:text-3xl">mg</span></p>
-                </div>
-                <div>
-                  <p className="text-base text-[var(--cafino-text)] sm:text-lg">Daily Avg</p>
-                  <p className="mt-1 text-4xl font-bold text-[var(--cafino-accent)] sm:text-5xl">{statsLogs.length === 0 ? 0 : Math.round(statsLogs.reduce((s, l) => s + l.caffeine, 0) / Math.max(1, new Set(statsLogs.map((i) => i.date)).size))}<span className="ml-1 text-2xl font-semibold text-[var(--cafino-text-muted)] sm:text-3xl">mg</span></p>
+                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Spend</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.reduce((s, l) => s + l.price, 0).toFixed(0)}</p>
                 </div>
               </div>
             </div>
 
             <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
                 <div>
-                  <p className="text-base text-[var(--cafino-text)] sm:text-lg">Total Sugar</p>
-                  <p className="mt-1 text-4xl font-bold text-[var(--cafino-accent)] sm:text-5xl">{statsLogs.reduce((s, l) => s + l.sugar, 0)}<span className="ml-1 text-2xl font-semibold text-[var(--cafino-text-muted)] sm:text-3xl">g</span></p>
+                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Caffeine</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.reduce((s, l) => s + l.caffeine, 0)}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">mg</span></p>
                 </div>
                 <div>
-                  <p className="text-base text-[var(--cafino-text)] sm:text-lg">Daily Avg</p>
-                  <p className="mt-1 text-4xl font-bold text-[var(--cafino-accent)] sm:text-5xl">{statsLogs.length === 0 ? 0 : Math.round(statsLogs.reduce((s, l) => s + l.sugar, 0) / Math.max(1, new Set(statsLogs.map((i) => i.date)).size))}<span className="ml-1 text-2xl font-semibold text-[var(--cafino-text-muted)] sm:text-3xl">g</span></p>
+                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Daily Avg</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.length === 0 ? 0 : Math.round(statsLogs.reduce((s, l) => s + l.caffeine, 0) / Math.max(1, new Set(statsLogs.map((i) => i.date)).size))}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">mg</span></p>
+                </div>
+              </div>
+            </div>
+
+            <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
+                <div>
+                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Sugar</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.reduce((s, l) => s + l.sugar, 0)}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">g</span></p>
+                </div>
+                <div>
+                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Daily Avg</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.length === 0 ? 0 : Math.round(statsLogs.reduce((s, l) => s + l.sugar, 0) / Math.max(1, new Set(statsLogs.map((i) => i.date)).size))}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">g</span></p>
                 </div>
               </div>
             </div>
@@ -906,7 +906,7 @@ export function CafinoOnlineApp() {
         )}
       </div>
 
-      <nav className="grid grid-cols-3 border-t border-[var(--cafino-border)] bg-[var(--cafino-soft)] py-2">
+      <nav className="grid grid-cols-3 border-t border-[var(--cafino-border)] bg-[var(--cafino-soft)] py-2" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
         <button className={`flex flex-col items-center py-2 text-sm ${activeTab === "home" ? "font-bold text-[var(--cafino-accent-strong)]" : "text-[var(--cafino-text-muted)]"}`} onClick={() => setActiveTab("home")}>
           <Coffee size={28} />
         </button>
@@ -920,14 +920,14 @@ export function CafinoOnlineApp() {
 
       {showTypeSheet && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-2">
-          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl duration-300" style={{ backgroundColor: activeThemeChoice.soft }}>
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl duration-300 sm:max-w-[720px]" style={{ backgroundColor: activeThemeChoice.soft }}>
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] px-4 py-3" style={{ backgroundColor: activeThemeChoice.soft }}>
               <button className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl" onClick={() => setShowTypeSheet(false)}>Cancel</button>
               <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Coffee Type</p>
               <span className="w-12" />
             </div>
 
-            <div className="grid grid-cols-3 gap-3 p-4">
+            <div className="grid grid-cols-2 gap-3 p-4 min-[420px]:grid-cols-3">
               {COFFEE_TYPES.map((item) => {
                 const selected = preferredType === item.id;
                 return (
@@ -951,12 +951,12 @@ export function CafinoOnlineApp() {
 
       {showThemeSheet && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-2">
-          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl duration-300" style={{ backgroundColor: activeThemeChoice.soft }}>
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl duration-300 sm:max-w-[720px]" style={{ backgroundColor: activeThemeChoice.soft }}>
             <div className="sticky top-0 z-20 flex items-center justify-center border-b border-[var(--cafino-border)] px-4 py-4" style={{ backgroundColor: activeThemeChoice.soft }}>
               <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Color Theme</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 p-4">
+            <div className="grid grid-cols-1 gap-3 p-4 min-[360px]:grid-cols-2">
               {CAFINO_THEMES.map((item) => {
                 const selected = themeId === item.id;
                 return (
@@ -1001,7 +1001,7 @@ export function CafinoOnlineApp() {
 
       {showDateDetail && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-2">
-          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300 sm:max-w-[720px]">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-4 py-3">
               <button className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl" onClick={() => setShowDateDetail(false)}>Cancel</button>
               <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Coffee Records</p>
@@ -1016,7 +1016,7 @@ export function CafinoOnlineApp() {
               </button>
             </div>
 
-            <div className="p-4">
+            <div className="space-y-4 p-4">
 
             <div className="cafino-surface mb-4 rounded-2xl bg-white p-4 sm:p-5">
               <h3 className="text-3xl font-bold text-[var(--cafino-text)] sm:text-4xl">{selectedDateShort}</h3>
@@ -1067,7 +1067,7 @@ export function CafinoOnlineApp() {
                       <p className="text-xs text-[var(--cafino-text-muted)]">{entry.temp === "Hot" ? "🔥" : "🧊"} {entry.size} · {formatTime(entry.createdAt)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-[var(--cafino-accent-strong)]">{entry.caffeine}</p>
+                      <p className="text-xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-2xl">{entry.caffeine}</p>
                       <p className="text-xs text-[var(--cafino-text-muted)]">mg</p>
                     </div>
                   </div>
@@ -1081,7 +1081,7 @@ export function CafinoOnlineApp() {
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 p-2">
-          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94vh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300 sm:max-w-[720px]">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-4 py-3">
               <button onClick={() => setShowAdd(false)} className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl">Cancel</button>
               <p className="text-2xl font-semibold sm:text-3xl">Add Coffee</p>
@@ -1155,7 +1155,7 @@ export function CafinoOnlineApp() {
               </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-4">
                 {["Small", "Medium", "Large", "XL"].map((s) => (
                   <button key={s} className={`rounded-xl border px-2 py-2 text-sm ${draft.size === s ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-accent-strong)] text-white" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => onSizeChange(s)}>{s}</button>
                 ))}
