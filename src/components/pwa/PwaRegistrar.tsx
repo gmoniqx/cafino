@@ -8,6 +8,16 @@ export function PwaRegistrar() {
       return;
     }
 
+    // In dev, service workers often cache stale app shells/chunks and cause RSC mismatches.
+    if (process.env.NODE_ENV !== "production") {
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => {
+          void registration.unregister();
+        });
+      });
+      return;
+    }
+
     let refreshing = false;
 
     const register = async () => {

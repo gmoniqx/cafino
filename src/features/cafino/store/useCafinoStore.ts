@@ -18,6 +18,18 @@ export interface CoffeeLog {
   note: string;
   homeDisplay: boolean;
   photo: string | null;
+  homemadeBrand?: string;
+  beanName?: string;
+  beanOrigin?: string;
+  beanRoast?: "Light" | "Medium" | "Dark" | "";
+  beanFlavor?: string;
+  brewMethod?: string;
+  brewGrind?: string;
+  brewDose?: number;
+  brewWater?: number;
+  brewTime?: number;
+  brewTimeUnit?: "s" | "m" | "h";
+  brewNotes?: string;
   date: string;
   createdAt: string;
 }

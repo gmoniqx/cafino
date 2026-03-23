@@ -1,14 +1,33 @@
 "use client";
 
 import Image from "next/image";
-import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Hand, Heart, MessageCircle, Plus, Search, SendHorizontal, Settings, Share, SquarePen, UserRound } from "lucide-react";
+import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Heart, MessageCircle, Plus, SendHorizontal, Settings, Share, UserRound } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
 import { useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { CAFINO_THEMES, getThemeChoice } from "@/features/cafino/theme/themes";
 
-const COFFEE_TYPES = [
+interface CoffeeTypeOption {
+  id: string;
+  label: string;
+  emoji: string;
+  icon?: string;
+  caffeine: number;
+  sugar?: number;
+  isCustom?: boolean;
+}
+
+interface CustomCoffeeType {
+  id: string;
+  label: string;
+  emoji: string;
+  order: number;
+  caffeine: number;
+  sugar: number;
+}
+
+const COFFEE_TYPES: CoffeeTypeOption[] = [
   { id: "espresso", label: "Espresso", emoji: "☕", icon: "/espresso.png", caffeine: 63 },
   { id: "americano", label: "Americano", emoji: "🥃", icon: "/americano.png", caffeine: 75 },
   { id: "latte", label: "Latte", emoji: "🥛", icon: "/latte.png", caffeine: 75 },
@@ -19,7 +38,15 @@ const COFFEE_TYPES = [
   { id: "others", label: "Others", emoji: "➕", icon: "/others.png", caffeine: 80 },
 ] as const;
 
-type CoffeeTypeId = (typeof COFFEE_TYPES)[number]["id"];
+const DEFAULT_TYPE_ICONS = [
+  "☕", "🥤", "🧋", "🍵", "🫖",
+  "🥛", "🍼", "🧃", "🥃", "🍷",
+  "🥂", "🍾", "🍹", "🍸", "☁️",
+  "⚪", "🔥", "🧊", "🍫", "🍪",
+  "🥐", "🧈", "🍰", "🎂", "☀️",
+] as const;
+
+type CoffeeTypeId = string;
 
 const SIZE_CAFFEINE: Record<string, number> = { Small: 0.75, Medium: 1, Large: 1.3, XL: 1.6 };
 const MONTH_SHORT = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -33,6 +60,27 @@ const DONATION_URL = "https://buymeacoffee.com/cafino";
 
 type StatsPeriod = "week" | "month" | "year";
 type TempOption = "Iced" | "Hot";
+type RoastLevel = "Light" | "Medium" | "Dark" | "";
+type BrewTimeUnit = "s" | "m" | "h";
+
+interface BeanTemplate {
+  id: string;
+  name: string;
+  origin: string;
+  roast: RoastLevel;
+  flavor: string;
+}
+
+interface BrewTemplate {
+  id: string;
+  label: string;
+  method: string;
+  grind: string;
+  dose: number;
+  water: number;
+  time: number;
+  unit: BrewTimeUnit;
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -64,6 +112,26 @@ function formatDateCard(key: string) {
   return `${dayName}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
 }
 
+function formatPeso(value: number) {
+  return `₱${value.toFixed(0)}`;
+}
+
+function startOfWeek(date: Date) {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  const day = (normalized.getDay() + 6) % 7;
+  normalized.setDate(normalized.getDate() - day);
+  return normalized;
+}
+
+function formatWeekRange(start: Date, end: Date) {
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${MONTH_SHORT[start.getMonth()]} ${start.getDate()}-${end.getDate()}, ${start.getFullYear()}`;
+  }
+
+  return `${MONTH_SHORT[start.getMonth()]} ${start.getDate()}, ${start.getFullYear()} - ${MONTH_SHORT[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+}
+
 interface DraftState {
   editingId: string | null;
   selectedDate: string;
@@ -76,6 +144,18 @@ interface DraftState {
   price: number;
   photo: string | null;
   homemade: boolean;
+  homemadeBrand: string;
+  beanName: string;
+  beanOrigin: string;
+  beanRoast: RoastLevel;
+  beanFlavor: string;
+  brewMethod: string;
+  brewGrind: string;
+  brewDose: number;
+  brewWater: number;
+  brewTime: number;
+  brewTimeUnit: BrewTimeUnit;
+  brewNotes: string;
   note: string;
   homeDisplay: boolean;
 }
@@ -88,18 +168,62 @@ interface BrandItem {
   cutout: boolean;
 }
 
+interface ShareCardPayload {
+  title: string;
+  subtitle: string;
+  highlights: Array<{ label: string; value: string }>;
+  caption?: string;
+}
+
+interface ShareCardSticker {
+  imageSrc?: string | null;
+  emoji?: string;
+  label: string;
+}
+
+const DEFAULT_BEAN_TEMPLATES: BeanTemplate[] = [
+  {
+    id: "bean-colombian-supremo",
+    name: "Colombian Supremo",
+    origin: "Colombia",
+    roast: "Medium",
+    flavor: "Balanced, caramel, nutty",
+  },
+  {
+    id: "bean-ethiopian-yirgacheffe",
+    name: "Ethiopian Yirgacheffe",
+    origin: "Ethiopia",
+    roast: "Light",
+    flavor: "Citrus, floral, tea-like",
+  },
+  {
+    id: "bean-yunnan-arabica",
+    name: "Yunnan Arabica",
+    origin: "Yunnan, China",
+    roast: "Medium",
+    flavor: "Nutty, chocolate, mild acidity",
+  },
+];
+
+const DEFAULT_BREW_TEMPLATES: BrewTemplate[] = [
+  { id: "brew-cold-brew", label: "Cold Brew", method: "Cold Brew", grind: "Coarse", dose: 100, water: 1000, time: 12, unit: "h" },
+  { id: "brew-espresso", label: "Espresso", method: "Espresso", grind: "Fine", dose: 18, water: 36, time: 28, unit: "s" },
+  { id: "brew-aeropress", label: "AeroPress", method: "AeroPress", grind: "Medium Fine", dose: 17, water: 250, time: 90, unit: "s" },
+  { id: "brew-v60", label: "V60", method: "V60", grind: "Medium", dose: 15, water: 250, time: 2, unit: "m" },
+];
+
 function DrinkTypeIcon({
   type,
   size,
   className,
 }: {
-  type: (typeof COFFEE_TYPES)[number];
+  type: CoffeeTypeOption;
   size: number;
   className?: string;
 }) {
   const [loadFailed, setLoadFailed] = useState(false);
 
-  if (loadFailed) {
+  if (loadFailed || !type.icon) {
     return (
       <span className={className} aria-hidden>
         {type.emoji}
@@ -134,6 +258,18 @@ function defaultDraft(date: string, initialType: CoffeeTypeId = COFFEE_TYPES[0].
     price: 0,
     photo: null,
     homemade: false,
+    homemadeBrand: "Others",
+    beanName: "",
+    beanOrigin: "",
+    beanRoast: "",
+    beanFlavor: "",
+    brewMethod: "",
+    brewGrind: "",
+    brewDose: 0,
+    brewWater: 0,
+    brewTime: 0,
+    brewTimeUnit: "m",
+    brewNotes: "",
     note: "",
     homeDisplay: false,
   };
@@ -158,14 +294,45 @@ export function CafinoOnlineApp() {
   const setWallpaper = useCafinoStore((s) => s.setWallpaper);
 
   const [showAdd, setShowAdd] = useState(false);
+  const [showNewCoffeeTypeSheet, setShowNewCoffeeTypeSheet] = useState(false);
+  const [showTypeIconSheet, setShowTypeIconSheet] = useState(false);
   const [showDateDetail, setShowDateDetail] = useState(false);
   const [showThemeSheet, setShowThemeSheet] = useState(false);
-  const [showWidgetsSheet, setShowWidgetsSheet] = useState(false);
   const [showBrandSheet, setShowBrandSheet] = useState(false);
   const [showAddBrandSheet, setShowAddBrandSheet] = useState(false);
   const [showDeveloperSheet, setShowDeveloperSheet] = useState(false);
+  const [showBeanTemplatesSheet, setShowBeanTemplatesSheet] = useState(false);
+  const [showBrewTemplatesSheet, setShowBrewTemplatesSheet] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSending, setFeedbackSending] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [customCoffeeTypes, setCustomCoffeeTypes] = useState<CustomCoffeeType[]>(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+
+    try {
+      const raw = window.localStorage.getItem("cafino-online-custom-types");
+      if (!raw) {
+        return [];
+      }
+
+      const parsed = JSON.parse(raw) as CustomCoffeeType[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+  const [newCoffeeTypeDraft, setNewCoffeeTypeDraft] = useState({
+    name: "",
+    order: "",
+    emoji: "☕",
+    caffeine: 75,
+    sugar: 0,
+  });
+  const [beanTemplates, setBeanTemplates] = useState<BeanTemplate[]>(DEFAULT_BEAN_TEMPLATES);
+  const [brewTemplates, setBrewTemplates] = useState<BrewTemplate[]>(DEFAULT_BREW_TEMPLATES);
   const [brands, setBrands] = useState<BrandItem[]>([]);
   const [brandDraft, setBrandDraft] = useState({
     name: "",
@@ -178,18 +345,51 @@ export function CafinoOnlineApp() {
   const [statsYear, setStatsYear] = useState(new Date().getFullYear());
   const [statsMonth, setStatsMonth] = useState(new Date().getMonth());
   const [statsPeriod, setStatsPeriod] = useState<StatsPeriod>("week");
-  const [cupMotion, setCupMotion] = useState({ x: 0, y: 0 });
+  const [statsWeekOffset, setStatsWeekOffset] = useState(0);
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showInstallButton, setShowInstallButton] = useState(false);
   const [installingApp, setInstallingApp] = useState(false);
   const [isStandaloneMode, setIsStandaloneMode] = useState(false);
   const [isIosSafari, setIsIosSafari] = useState(false);
   const [dismissedIosInstallHint, setDismissedIosInstallHint] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
-  const dragRef = useRef<{ id: string | null; startX: number; base: number }>({ id: null, startX: 0, base: 0 });
-  const safePreferredType = (COFFEE_TYPES.find((item) => item.id === preferredType)?.id ?? COFFEE_TYPES[0].id) as CoffeeTypeId;
+  const dragRef = useRef<{ id: string | null; startX: number; base: number; pointerId: number | null }>({
+    id: null,
+    startX: 0,
+    base: 0,
+    pointerId: null,
+  });
+  const statsChartHostRef = useRef<HTMLDivElement | null>(null);
+  const [statsChartReady, setStatsChartReady] = useState(false);
+  const allCoffeeTypes = useMemo<CoffeeTypeOption[]>(() => {
+    const custom = [...customCoffeeTypes]
+      .sort((a, b) => a.order - b.order)
+      .map((item) => ({
+        id: item.id,
+        label: item.label,
+        emoji: item.emoji,
+        caffeine: item.caffeine,
+        sugar: item.sugar,
+        isCustom: true,
+      }));
+
+    const base = COFFEE_TYPES.filter((item) => item.id !== "others");
+    const others = COFFEE_TYPES.find((item) => item.id === "others");
+    return others ? [...base, ...custom, others] : [...base, ...custom];
+  }, [customCoffeeTypes]);
+
+  const findCoffeeType = (id: string | undefined) => allCoffeeTypes.find((item) => item.id === id) ?? allCoffeeTypes[0] ?? COFFEE_TYPES[0];
+
+  const safePreferredType = findCoffeeType(preferredType).id as CoffeeTypeId;
   const [draft, setDraft] = useState<DraftState>(defaultDraft(todayKey(), safePreferredType));
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem("cafino-online-custom-types", JSON.stringify(customCoffeeTypes));
+  }, [customCoffeeTypes]);
 
   const dayKey = todayKey();
   const todayLogs = useMemo(() => logs.filter((l) => l.date === dayKey).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)), [logs, dayKey]);
@@ -203,7 +403,6 @@ export function CafinoOnlineApp() {
   const selectedDaySugar = logsForSelectedDay.reduce((sum, entry) => sum + entry.sugar, 0);
   const selectedDateLabel = formatDateCard(selectedDate);
   const selectedDateDayName = selectedDateLabel.split(",")[0] ?? "";
-  const selectedDateShort = selectedDateLabel.split(",")[1]?.trim() ?? selectedDateLabel;
   const activeThemeChoice = getThemeChoice(themeId);
   const themeVars = {
     "--cafino-accent": activeThemeChoice.accent,
@@ -273,8 +472,36 @@ export function CafinoOnlineApp() {
   }, [statsPeriod, logs, statsYear, statsMonth]);
 
   const hasBarData = barData.some((item) => item.cups > 0);
-  const statsTopLog = statsLogs.length > 0 ? statsLogs[statsLogs.length - 1] : null;
-  const showIosInstallHint = isIosSafari && !isStandaloneMode && !showInstallButton && !dismissedIosInstallHint;
+  const weeklyCupView = useMemo(() => {
+    const now = new Date();
+    const baseWeekStart = startOfWeek(now);
+    const weekStart = new Date(baseWeekStart);
+    weekStart.setDate(baseWeekStart.getDate() - statsWeekOffset * 7);
+
+    const weekDates = Array.from({ length: 7 }).map((_, idx) => {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + idx);
+      return date;
+    });
+
+    const weekKeys = new Set(
+      weekDates.map((date) => dateKey(date.getFullYear(), date.getMonth(), date.getDate())),
+    );
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+
+    const weekLogs = logs
+      .filter((entry) => weekKeys.has(entry.date))
+      .sort((a, b) => (a.createdAt > b.createdAt ? 1 : -1));
+
+    return {
+      start: weekStart,
+      end: weekEnd,
+      label: formatWeekRange(weekStart, weekEnd),
+      logs: weekLogs,
+    };
+  }, [logs, statsWeekOffset]);
+  const showIosInstallHint = isIosSafari && !isStandaloneMode && !dismissedIosInstallHint;
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof navigator === "undefined") {
@@ -302,6 +529,37 @@ export function CafinoOnlineApp() {
   }, []);
 
   useEffect(() => {
+    if (activeTab !== "stats") {
+      setStatsChartReady(false);
+      return;
+    }
+
+    const host = statsChartHostRef.current;
+    if (!host) {
+      setStatsChartReady(false);
+      return;
+    }
+
+    const updateReady = () => {
+      setStatsChartReady(host.clientWidth > 0 && host.clientHeight > 0);
+    };
+
+    updateReady();
+
+    if (typeof ResizeObserver === "undefined") {
+      setStatsChartReady(true);
+      return;
+    }
+
+    const observer = new ResizeObserver(updateReady);
+    observer.observe(host);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -311,14 +569,11 @@ export function CafinoOnlineApp() {
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault();
       setInstallPromptEvent(event as BeforeInstallPromptEvent);
-      setShowInstallButton(true);
     };
 
     const onAppInstalled = () => {
       setInstallPromptEvent(null);
-      setShowInstallButton(false);
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt as EventListener);
@@ -329,30 +584,6 @@ export function CafinoOnlineApp() {
       window.removeEventListener("appinstalled", onAppInstalled);
     };
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || activeTab !== "stats" || statsLogs.length === 0) {
-      return;
-    }
-
-    let frameId = 0;
-    const start = performance.now();
-
-    const animate = (now: number) => {
-      const elapsed = (now - start) / 1000;
-      const x = Math.sin(elapsed * 1.25) * 7;
-      const y = Math.cos(elapsed * 1.7) * 4;
-      setCupMotion({ x, y });
-      frameId = window.requestAnimationFrame(animate);
-    };
-
-    frameId = window.requestAnimationFrame(animate);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      setCupMotion({ x: 0, y: 0 });
-    };
-  }, [activeTab, statsLogs.length]);
 
   const onStatsMonthShift = (direction: -1 | 1) => {
     const nextMonth = statsMonth + direction;
@@ -388,6 +619,18 @@ export function CafinoOnlineApp() {
         price: existing.price,
         photo: existing.photo,
         homemade: existing.homemade,
+        homemadeBrand: existing.homemadeBrand ?? "Others",
+        beanName: existing.beanName ?? "",
+        beanOrigin: existing.beanOrigin ?? "",
+        beanRoast: existing.beanRoast ?? "",
+        beanFlavor: existing.beanFlavor ?? "",
+        brewMethod: existing.brewMethod ?? "",
+        brewGrind: existing.brewGrind ?? "",
+        brewDose: existing.brewDose ?? 0,
+        brewWater: existing.brewWater ?? 0,
+        brewTime: existing.brewTime ?? 0,
+        brewTimeUnit: existing.brewTimeUnit ?? "m",
+        brewNotes: existing.brewNotes ?? "",
         note: existing.note,
         homeDisplay: existing.homeDisplay,
       });
@@ -397,6 +640,12 @@ export function CafinoOnlineApp() {
 
     const fresh = defaultDraft(targetDate, safePreferredType);
     setDraft(fresh);
+    setShowAdd(true);
+  };
+
+  const openAddAnother = (targetDate: string) => {
+    setSelectedDate(targetDate);
+    setDraft(defaultDraft(targetDate, safePreferredType));
     setShowAdd(true);
   };
 
@@ -414,23 +663,93 @@ export function CafinoOnlineApp() {
       note: draft.note,
       homeDisplay: draft.homeDisplay,
       photo: draft.photo,
+      homemadeBrand: draft.homemade ? draft.homemadeBrand : "",
+      beanName: draft.homemade ? draft.beanName : "",
+      beanOrigin: draft.homemade ? draft.beanOrigin : "",
+      beanRoast: draft.homemade ? draft.beanRoast : "",
+      beanFlavor: draft.homemade ? draft.beanFlavor : "",
+      brewMethod: draft.homemade ? draft.brewMethod : "",
+      brewGrind: draft.homemade ? draft.brewGrind : "",
+      brewDose: draft.homemade ? draft.brewDose : 0,
+      brewWater: draft.homemade ? draft.brewWater : 0,
+      brewTime: draft.homemade ? draft.brewTime : 0,
+      brewTimeUnit: draft.homemade ? draft.brewTimeUnit : "m",
+      brewNotes: draft.homemade ? draft.brewNotes : "",
       date: draft.selectedDate,
       createdAt: new Date().toISOString(),
     });
     setShowAdd(false);
   };
 
+  const applyBeanTemplate = (template: BeanTemplate) => {
+    setDraft((prev) => ({
+      ...prev,
+      homemade: true,
+      beanName: template.name,
+      beanOrigin: template.origin,
+      beanRoast: template.roast,
+      beanFlavor: template.flavor,
+    }));
+    setShowBeanTemplatesSheet(false);
+  };
+
+  const applyBrewTemplate = (template: BrewTemplate) => {
+    setDraft((prev) => ({
+      ...prev,
+      homemade: true,
+      brewMethod: template.method,
+      brewGrind: template.grind,
+      brewDose: template.dose,
+      brewWater: template.water,
+      brewTime: template.time,
+      brewTimeUnit: template.unit,
+    }));
+    setShowBrewTemplatesSheet(false);
+  };
+
+  const onSaveCurrentBeanTemplate = () => {
+    const next: BeanTemplate = {
+      id: `bean-custom-${Date.now()}`,
+      name: draft.beanName.trim() || `Custom Bean ${beanTemplates.length + 1}`,
+      origin: draft.beanOrigin.trim() || "Custom Origin",
+      roast: draft.beanRoast || "Medium",
+      flavor: draft.beanFlavor.trim() || "Flavor notes",
+    };
+    setBeanTemplates((prev) => [next, ...prev]);
+  };
+
+  const onSaveCurrentBrewTemplate = () => {
+    const next: BrewTemplate = {
+      id: `brew-custom-${Date.now()}`,
+      label: draft.brewMethod.trim() || `Custom Brew ${brewTemplates.length + 1}`,
+      method: draft.brewMethod.trim() || "Pour Over",
+      grind: draft.brewGrind.trim() || "Medium",
+      dose: draft.brewDose || 15,
+      water: draft.brewWater || 250,
+      time: draft.brewTime || 2,
+      unit: draft.brewTimeUnit,
+    };
+    setBrewTemplates((prev) => [next, ...prev]);
+  };
+
   const onTypeChange = (nextType: CoffeeTypeId) => {
-    const info = COFFEE_TYPES.find((t) => t.id === nextType) ?? COFFEE_TYPES[0];
+    if (nextType === "others") {
+      setShowNewCoffeeTypeSheet(true);
+      return;
+    }
+
+    const info = findCoffeeType(nextType);
     setDraft((prev) => ({
       ...prev,
       type: nextType,
+      name: prev.name || info.label,
+      sugar: info.isCustom ? (info.sugar ?? prev.sugar) : prev.sugar,
       caffeine: Math.round(info.caffeine * (SIZE_CAFFEINE[prev.size] ?? 1)),
     }));
   };
 
   const onSizeChange = (nextSize: string) => {
-    const info = COFFEE_TYPES.find((t) => t.id === draft.type) ?? COFFEE_TYPES[0];
+    const info = findCoffeeType(draft.type);
     setDraft((prev) => ({
       ...prev,
       size: nextSize,
@@ -438,17 +757,49 @@ export function CafinoOnlineApp() {
     }));
   };
 
-  const onSwipeStart = (id: string, clientX: number) => {
+  const onSaveNewCoffeeType = () => {
+    const trimmedName = newCoffeeTypeDraft.name.trim();
+    if (!trimmedName) {
+      return;
+    }
+
+    const normalizedEmoji = newCoffeeTypeDraft.emoji.trim();
+
+    const id = `custom-${Date.now()}`;
+    const order = Number(newCoffeeTypeDraft.order) || customCoffeeTypes.length + 10;
+    const customType: CustomCoffeeType = {
+      id,
+      label: trimmedName,
+      emoji: normalizedEmoji || "☕",
+      order,
+      caffeine: Math.max(0, Math.min(500, newCoffeeTypeDraft.caffeine)),
+      sugar: Math.max(0, Math.min(100, newCoffeeTypeDraft.sugar)),
+    };
+
+    setCustomCoffeeTypes((prev) => [...prev, customType]);
+    setDraft((prev) => ({
+      ...prev,
+      type: customType.id,
+      name: trimmedName,
+      caffeine: Math.round(customType.caffeine * (SIZE_CAFFEINE[prev.size] ?? 1)),
+      sugar: customType.sugar,
+    }));
+    setShowNewCoffeeTypeSheet(false);
+    setNewCoffeeTypeDraft({ name: "", order: "", emoji: "☕", caffeine: 75, sugar: 0 });
+  };
+
+  const onSwipeStart = (id: string, clientX: number, pointerId: number) => {
     dragRef.current = {
       id,
       startX: clientX,
       base: swipeOffsets[id] ?? 0,
+      pointerId,
     };
   };
 
-  const onSwipeMove = (clientX: number) => {
+  const onSwipeMove = (clientX: number, pointerId: number) => {
     const drag = dragRef.current;
-    if (!drag.id) {
+    if (!drag.id || drag.pointerId !== pointerId) {
       return;
     }
 
@@ -456,34 +807,270 @@ export function CafinoOnlineApp() {
     setSwipeOffsets({ [drag.id]: nextOffset });
   };
 
-  const onSwipeEnd = () => {
+  const onSwipeEnd = (pointerId?: number) => {
     const drag = dragRef.current;
-    if (!drag.id) {
+    if (!drag.id || (typeof pointerId === "number" && drag.pointerId !== pointerId)) {
       return;
     }
 
     const value = swipeOffsets[drag.id] ?? 0;
     setSwipeOffsets(value <= -ACTION_WIDTH / 3 ? { [drag.id]: -ACTION_WIDTH } : {});
-    dragRef.current = { id: null, startX: 0, base: 0 };
+    dragRef.current = { id: null, startX: 0, base: 0, pointerId: null };
   };
 
-  const onShare = async (id: string) => {
-    const target = logs.find((item) => item.id === id);
-    if (!target) {
-      return;
+  const buildShareCardImage = async (payload: ShareCardPayload, sticker?: ShareCardSticker) => {
+    if (typeof document === "undefined") {
+      return null;
     }
 
-    const typeInfo = COFFEE_TYPES.find((item) => item.id === target.type) ?? COFFEE_TYPES[0];
-    const text = `${target.name || typeInfo.label} · ${target.size} · ${target.temp} · ${target.caffeine} mg`;
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return null;
+    }
+
+    const accent = activeThemeChoice.accent;
+    const soft = activeThemeChoice.soft;
+
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, soft);
+    gradient.addColorStop(1, "#ffffff");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.beginPath();
+    ctx.roundRect(58, 58, canvas.width - 116, canvas.height - 116, 52);
+    ctx.fill();
+
+    ctx.fillStyle = accent;
+    ctx.font = "700 68px Georgia";
+    ctx.fillText(payload.title, 106, 190);
+
+    ctx.fillStyle = "#5a5a5a";
+    ctx.font = "500 36px Inter, Segoe UI, sans-serif";
+    ctx.fillText(payload.subtitle, 106, 250);
+
+    if (sticker) {
+      const stickerSize = 214;
+      const stickerX = canvas.width - stickerSize - 108;
+      const stickerY = 118;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.roundRect(stickerX, stickerY, stickerSize, stickerSize, 42);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(0,0,0,0.08)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(stickerX, stickerY, stickerSize, stickerSize, 42);
+      ctx.stroke();
+
+      if (sticker.imageSrc) {
+        try {
+          const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new window.Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error("Failed to load sticker image"));
+            img.src = sticker.imageSrc;
+          });
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(stickerX + 10, stickerY + 10, stickerSize - 20, stickerSize - 20, 36);
+          ctx.clip();
+          ctx.drawImage(image, stickerX + 10, stickerY + 10, stickerSize - 20, stickerSize - 20);
+          ctx.restore();
+        } catch {
+          ctx.fillStyle = accent;
+          ctx.font = "700 116px Inter, Segoe UI Emoji, sans-serif";
+          ctx.fillText(sticker.emoji ?? "☕", stickerX + 54, stickerY + 145);
+        }
+      } else {
+        ctx.fillStyle = accent;
+        ctx.font = "700 116px Inter, Segoe UI Emoji, sans-serif";
+        ctx.fillText(sticker.emoji ?? "☕", stickerX + 54, stickerY + 145);
+      }
+
+      ctx.fillStyle = "#606060";
+      ctx.font = "600 24px Inter, Segoe UI, sans-serif";
+      ctx.fillText(sticker.label, stickerX + 16, stickerY + stickerSize + 30);
+    }
+
+    const cardStartY = 350;
+    const cardHeight = 145;
+    const cardGap = 18;
+
+    payload.highlights.slice(0, 6).forEach((item, idx) => {
+      const y = cardStartY + idx * (cardHeight + cardGap);
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.roundRect(98, y, canvas.width - 196, cardHeight, 28);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(0,0,0,0.05)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(98, y, canvas.width - 196, cardHeight, 28);
+      ctx.stroke();
+
+      ctx.fillStyle = "#7a7a7a";
+      ctx.font = "500 30px Inter, Segoe UI, sans-serif";
+      ctx.fillText(item.label, 132, y + 55);
+
+      ctx.fillStyle = "#242424";
+      ctx.font = "700 42px Inter, Segoe UI, sans-serif";
+      ctx.fillText(item.value, 132, y + 106);
+    });
+
+    if (payload.caption) {
+      ctx.fillStyle = "#666";
+      ctx.font = "500 30px Inter, Segoe UI, sans-serif";
+      ctx.fillText(payload.caption, 106, canvas.height - 130);
+    }
+
+    if (shareCards) {
+      ctx.fillStyle = accent;
+      ctx.font = "700 28px Inter, Segoe UI, sans-serif";
+      ctx.fillText("Made with Cafino", canvas.width - 330, canvas.height - 84);
+    }
+
+    return canvas.toDataURL("image/png");
+  };
+
+  const shareCard = async ({
+    title,
+    text,
+    imageDataUrl,
+    filename,
+  }: {
+    title: string;
+    text: string;
+    imageDataUrl: string | null;
+    filename: string;
+  }) => {
+    if (typeof navigator !== "undefined" && navigator.share && imageDataUrl) {
+      try {
+        const blob = await fetch(imageDataUrl).then((response) => response.blob());
+        const file = new File([blob], filename, { type: "image/png" });
+
+        if (typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] })) {
+          await navigator.share({ title, text, files: [file] });
+          return;
+        }
+      } catch {
+        // Fallbacks below handle share incompatibilities.
+      }
+    }
 
     if (typeof navigator !== "undefined" && navigator.share) {
-      await navigator.share({ title: "Cafino Coffee", text });
-      return;
+      try {
+        await navigator.share({ title, text });
+        return;
+      } catch {
+        // Continue to clipboard/download fallback.
+      }
+    }
+
+    if (imageDataUrl && typeof document !== "undefined") {
+      const link = document.createElement("a");
+      link.href = imageDataUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     }
 
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       await navigator.clipboard.writeText(text);
     }
+  };
+
+  const onEditEntry = (id: string) => {
+    const target = logs.find((item) => item.id === id);
+    if (!target) {
+      return;
+    }
+
+    const type = findCoffeeType(target.type).id as CoffeeTypeId;
+    setDraft({
+      editingId: target.id,
+      selectedDate: target.date,
+      type,
+      size: target.size,
+      temp: target.temp,
+      name: target.name,
+      caffeine: target.caffeine,
+      sugar: target.sugar,
+      price: target.price,
+      photo: target.photo,
+      homemade: target.homemade,
+      homemadeBrand: target.homemadeBrand ?? "Others",
+      beanName: target.beanName ?? "",
+      beanOrigin: target.beanOrigin ?? "",
+      beanRoast: target.beanRoast ?? "",
+      beanFlavor: target.beanFlavor ?? "",
+      brewMethod: target.brewMethod ?? "",
+      brewGrind: target.brewGrind ?? "",
+      brewDose: target.brewDose ?? 0,
+      brewWater: target.brewWater ?? 0,
+      brewTime: target.brewTime ?? 0,
+      brewTimeUnit: target.brewTimeUnit ?? "m",
+      brewNotes: target.brewNotes ?? "",
+      note: target.note,
+      homeDisplay: target.homeDisplay,
+    });
+    setSelectedDate(target.date);
+    setShowAdd(true);
+    setSwipeOffsets({});
+  };
+
+  const onDeleteEntry = (id: string) => {
+    removeLog(id);
+    setSwipeOffsets({});
+  };
+
+  const onShareCupCard = async (id: string) => {
+    const target = logs.find((item) => item.id === id);
+    if (!target) {
+      return;
+    }
+
+    const typeInfo = findCoffeeType(target.type);
+    const title = `${target.name || typeInfo.label} Card`;
+    const subtitle = `${formatDateCard(target.date)} · ${formatTime(target.createdAt)}`;
+    const text = `${target.name || typeInfo.label} · ${target.temp} · ${target.size} · ${target.caffeine} mg`;
+
+    const imageDataUrl = await buildShareCardImage(
+      {
+      title,
+      subtitle,
+      highlights: [
+        { label: "Drink", value: target.name || typeInfo.label },
+        { label: "Temperature", value: target.temp },
+        { label: "Size", value: target.size },
+        { label: "Caffeine", value: `${target.caffeine} mg` },
+        { label: "Sugar", value: `${target.sugar} g` },
+        { label: "Spend", value: formatPeso(target.price) },
+      ],
+      caption: target.note ? `Note: ${target.note}` : "Your coffee moment, captured.",
+      },
+      {
+        imageSrc: target.photo,
+        emoji: typeInfo.emoji,
+        label: target.name || typeInfo.label,
+      },
+    );
+
+    await shareCard({
+      title,
+      text,
+      imageDataUrl,
+      filename: `cafino-cup-${target.date}.png`,
+    });
   };
 
   const onShareStats = async () => {
@@ -497,17 +1084,37 @@ export function CafinoOnlineApp() {
       `Cups: ${statsLogs.length}`,
       `Caffeine: ${totalCaffeine} mg`,
       `Sugar: ${totalSugar} g`,
-      `Spend: ${totalSpend.toFixed(0)}`,
+      `Spend: ${formatPeso(totalSpend)}`,
     ].join("\n");
 
-    if (typeof navigator !== "undefined" && navigator.share) {
-      await navigator.share({ title: "Cafino Coffee Report", text });
-      return;
-    }
+    const statsTopDrink = statsLogs[statsLogs.length - 1];
+    const topTypeInfo = findCoffeeType(statsTopDrink?.type);
 
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      await navigator.clipboard.writeText(text);
-    }
+    const imageDataUrl = await buildShareCardImage(
+      {
+        title: `Cafino ${reportLabel}`,
+        subtitle: `${MONTH_SHORT[statsMonth]} ${statsYear}`,
+        highlights: [
+          { label: "Total Cups", value: String(statsLogs.length) },
+          { label: "Total Caffeine", value: `${totalCaffeine} mg` },
+          { label: "Total Sugar", value: `${totalSugar} g` },
+          { label: "Total Spend", value: formatPeso(totalSpend) },
+        ],
+        caption: "Track your coffee habit with Cafino.",
+      },
+      {
+        imageSrc: statsTopDrink?.photo,
+        emoji: topTypeInfo.emoji,
+        label: statsTopDrink?.name || topTypeInfo.label,
+      },
+    );
+
+    await shareCard({
+      title: "Cafino Coffee Report",
+      text,
+      imageDataUrl,
+      filename: `cafino-${statsPeriod}-${statsYear}-${statsMonth + 1}.png`,
+    });
   };
 
   const onWallpaperChange = (file: File | undefined) => {
@@ -566,16 +1173,41 @@ export function CafinoOnlineApp() {
     resetBrandDraft();
   };
 
-  const onSendFeedback = () => {
+  const onSendFeedback = async () => {
     const message = feedbackText.trim();
     if (!message) {
       return;
     }
 
-    const subject = encodeURIComponent("Feedback");
-    const body = encodeURIComponent(message);
-    window.location.href = `mailto:${DEV_EMAIL}?subject=${subject}&body=${body}`;
-    setFeedbackSent(true);
+    setFeedbackSending(true);
+    setFeedbackError(null);
+
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+          app: "cafino-online",
+          sentAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Failed to send feedback.");
+      }
+
+      setFeedbackSent(true);
+      setFeedbackText("");
+    } catch (error) {
+      setFeedbackError(error instanceof Error ? error.message : "Unable to send feedback right now.");
+      setFeedbackSent(false);
+    } finally {
+      setFeedbackSending(false);
+    }
   };
 
   const onInstallApp = async () => {
@@ -588,13 +1220,40 @@ export function CafinoOnlineApp() {
     const choice = await installPromptEvent.userChoice;
 
     setInstallPromptEvent(null);
-    setShowInstallButton(false);
     setInstallingApp(false);
 
     if (choice.outcome === "dismissed") {
       return;
     }
   };
+
+  const onInstallEntry = async () => {
+    if (isStandaloneMode) {
+      setStarted(true);
+      return;
+    }
+
+    if (installPromptEvent) {
+      await onInstallApp();
+      setStarted(true);
+      return;
+    }
+
+    if (isIosSafari) {
+      setDismissedIosInstallHint(false);
+      return;
+    }
+
+    setStarted(true);
+  };
+
+  const installCtaLabel = isStandaloneMode
+    ? "Open App"
+    : installPromptEvent
+      ? (installingApp ? "Preparing Install..." : "Install App")
+      : isIosSafari
+        ? "Install on iPhone"
+        : "Install App";
 
   if (!started) {
     return (
@@ -643,19 +1302,9 @@ export function CafinoOnlineApp() {
           ))}
         </div>
 
-        <button className="mt-3 h-12 rounded-3xl bg-[var(--cafino-accent)] text-lg font-bold text-white shadow-sm sm:h-14 sm:text-xl" onClick={() => setStarted(true)}>
-          Get Started
+        <button className="mt-3 h-12 rounded-3xl bg-[var(--cafino-accent)] text-lg font-bold text-white shadow-sm sm:h-14 sm:text-xl" onClick={onInstallEntry} disabled={installingApp}>
+          {installCtaLabel}
         </button>
-
-        {showInstallButton && (
-          <button
-            className="mt-2 h-12 rounded-3xl border border-[var(--cafino-accent)] bg-white text-base font-semibold text-[var(--cafino-accent-strong)] sm:h-14 sm:text-lg"
-            onClick={onInstallApp}
-            disabled={installingApp}
-          >
-            {installingApp ? "Preparing Install..." : "Install App"}
-          </button>
-        )}
 
         {showIosInstallHint && (
           <div className="mt-2 rounded-3xl border border-[var(--cafino-border)] bg-white p-4 text-left">
@@ -675,7 +1324,7 @@ export function CafinoOnlineApp() {
 
   return (
     <main className="cafino-app cafino-compact cafino-frame flex w-full flex-col bg-[var(--cafino-soft)]" style={themeVars}>
-      <div className="overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
         {activeTab === "home" && (
           <section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -724,7 +1373,7 @@ export function CafinoOnlineApp() {
                   const key = dateKey(calYear, calMonth, day);
                   const dayLogs = logs.filter((l) => l.date === key);
                   const last = dayLogs[dayLogs.length - 1];
-                  const info = COFFEE_TYPES.find((t) => t.id === last?.type) ?? COFFEE_TYPES[0];
+                  const info = findCoffeeType(last?.type);
                   const today = new Date();
                   const isToday = today.getFullYear() === calYear && today.getMonth() === calMonth && today.getDate() === day;
                   return (
@@ -754,9 +1403,21 @@ export function CafinoOnlineApp() {
               </div>
             </div>
 
-            <button className="mb-3.5 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--cafino-accent)] text-base font-semibold text-white sm:h-12 sm:text-lg" onClick={() => openAdd(selectedDate)}>
-              <Plus size={24} /> {logsForSelectedDay.length > 0 ? "Edit Cup" : "Add Cup"}
-            </button>
+            <div className="mb-3.5 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+              <button
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[var(--cafino-border)] bg-white text-base font-semibold text-[var(--cafino-text)] disabled:opacity-45 sm:h-12 sm:text-lg"
+                onClick={() => openAdd(selectedDate)}
+                disabled={logsForSelectedDay.length === 0}
+              >
+                Edit Cup
+              </button>
+              <button
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--cafino-accent)] text-base font-semibold text-white sm:h-12 sm:text-lg"
+                onClick={() => openAddAnother(dayKey)}
+              >
+                <Plus size={22} /> Add Another Cup for Today
+              </button>
+            </div>
 
             <h3 className="mb-2 text-lg font-bold min-[360px]:text-xl sm:text-2xl">Today's drink</h3>
             <div className="cafino-surface mb-3 rounded-2xl bg-white p-3.5 sm:p-4">
@@ -772,27 +1433,26 @@ export function CafinoOnlineApp() {
             ) : null}
 
             {todayLogs.map((entry) => {
-              const typeInfo = COFFEE_TYPES.find((t) => t.id === entry.type) ?? COFFEE_TYPES[0];
+              const typeInfo = findCoffeeType(entry.type);
               const offset = swipeOffsets[entry.id] ?? 0;
               return (
                 <div key={entry.id} className="relative mb-2 overflow-hidden rounded-2xl">
                   <div className="absolute inset-y-0 right-0 flex">
-                    <button className="w-[85px] bg-[var(--cafino-accent)] text-lg font-medium text-white" onClick={() => onShare(entry.id)}>Share</button>
-                    <button className="w-[85px] bg-[var(--cafino-danger)] text-lg font-medium text-white" onClick={() => removeLog(entry.id)}>Delete</button>
+                    <button className="w-[85px] bg-[var(--cafino-accent)] text-lg font-medium text-white" onClick={() => onEditEntry(entry.id)}>Edit</button>
+                    <button className="w-[85px] bg-[var(--cafino-danger)] text-lg font-medium text-white" onClick={() => onDeleteEntry(entry.id)}>Delete</button>
                   </div>
 
                   <div
                     className="cafino-surface relative flex touch-pan-y items-center gap-3 rounded-2xl bg-white p-3 transition-transform duration-200"
                     style={{ transform: `translateX(${offset}px)` }}
-                    onPointerDown={(event) => onSwipeStart(entry.id, event.clientX)}
-                    onPointerMove={(event) => {
-                      if (event.buttons === 1) {
-                        onSwipeMove(event.clientX);
-                      }
+                    onPointerDown={(event) => {
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      onSwipeStart(entry.id, event.clientX, event.pointerId);
                     }}
-                    onPointerUp={onSwipeEnd}
-                    onPointerCancel={onSwipeEnd}
-                    onPointerLeave={onSwipeEnd}
+                    onPointerMove={(event) => onSwipeMove(event.clientX, event.pointerId)}
+                    onPointerUp={(event) => onSwipeEnd(event.pointerId)}
+                    onPointerCancel={(event) => onSwipeEnd(event.pointerId)}
+                    onPointerLeave={(event) => onSwipeEnd(event.pointerId)}
                   >
                     {entry.photo ? (
                       <Image src={entry.photo} className="h-14 w-14 rounded-xl object-cover" alt="Coffee" width={56} height={56} unoptimized />
@@ -808,6 +1468,12 @@ export function CafinoOnlineApp() {
                     <div className="text-right">
                       <p className="text-xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-2xl">{entry.caffeine}</p>
                       <p className="text-xs text-[var(--cafino-text-muted)]">mg</p>
+                      <button
+                        className="mt-1 rounded-full border border-[var(--cafino-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--cafino-accent-strong)]"
+                        onClick={() => onShareCupCard(entry.id)}
+                      >
+                        Share
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -816,7 +1482,7 @@ export function CafinoOnlineApp() {
 
             {todayLogs.length > 0 && (
               <div className="mx-auto mt-2 inline-flex rounded-full bg-[var(--cafino-soft-strong)] px-5 py-2 text-sm font-semibold text-[var(--cafino-text)]">
-                Swipe left to share/delete record
+                Swipe left to edit/delete record
               </div>
             )}
           </section>
@@ -848,41 +1514,72 @@ export function CafinoOnlineApp() {
               </button>
             </div>
 
-            {statsLogs.length > 0 && (
-              <>
-                <div className="relative mb-3 inline-flex max-w-full rounded-3xl bg-[var(--cafino-soft-strong)] px-4 py-3 text-sm font-semibold text-[var(--cafino-text)] sm:px-5 sm:text-base">
-                  Tap on the right to share weekly, monthly, yearly coffee reports
-                </div>
-
+            <>
+              <div className="mb-3 flex items-center justify-between gap-2">
                 <button
-                  className="relative mb-4 flex h-52 w-full items-end justify-end overflow-hidden rounded-3xl bg-white p-4"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)] text-[var(--cafino-text-muted)] disabled:opacity-40"
+                  onClick={() => setStatsWeekOffset((value) => value + 1)}
+                  aria-label="Previous week"
                 >
-                  <div
-                    className="pointer-events-none select-none text-7xl"
-                    style={{
-                      transform: `translate3d(${cupMotion.x}px, ${cupMotion.y}px, 0)`,
-                      transition: "transform 180ms ease-out",
-                    }}
-                  >
-                    {statsTopLog?.photo ? (
-                      <Image
-                        src={statsTopLog.photo}
-                        alt="Coffee hero"
-                        width={96}
-                        height={120}
-                        className="h-32 w-24 object-cover drop-shadow-md"
-                        unoptimized
-                      />
-                    ) : (
-                      (() => {
-                        const fallbackType = COFFEE_TYPES.find((item) => item.id === statsTopLog?.type) ?? COFFEE_TYPES[0];
-                        return <DrinkTypeIcon type={fallbackType} size={108} className="h-28 w-28 object-contain" />;
-                      })()
-                    )}
-                  </div>
+                  <ChevronLeft size={18} />
                 </button>
-              </>
-            )}
+                <div className="inline-flex rounded-3xl bg-[var(--cafino-soft-strong)] px-4 py-3 text-center text-sm font-semibold text-[var(--cafino-text)] sm:px-5 sm:text-base">
+                  Weekly Cups: {weeklyCupView.label}
+                </div>
+                <button
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)] text-[var(--cafino-text-muted)] disabled:opacity-40"
+                  onClick={() => setStatsWeekOffset((value) => Math.max(0, value - 1))}
+                  disabled={statsWeekOffset === 0}
+                  aria-label="Next week"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div className="relative mb-4 h-56 w-full overflow-hidden rounded-3xl bg-white p-3 sm:h-60 sm:p-4">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.7),transparent_45%)]" />
+                {weeklyCupView.logs.length === 0 ? (
+                  <div className="relative flex h-full items-center justify-center rounded-2xl bg-[var(--cafino-surface-2)] px-4 text-center text-sm font-medium text-[var(--cafino-text-muted)]">
+                    No cups logged this week yet.
+                  </div>
+                ) : (
+                  <div className="relative flex h-full items-end gap-3 overflow-x-auto overflow-y-hidden pr-1">
+                    {weeklyCupView.logs.map((entry, idx) => {
+                      const typeInfo = findCoffeeType(entry.type);
+
+                      return (
+                        <div
+                          key={entry.id}
+                          className="cafino-cup-sway flex h-40 min-w-[6.2rem] shrink-0 items-center justify-center rounded-2xl bg-[var(--cafino-surface-2)]"
+                          style={{
+                            animationDelay: `${(idx % 8) * 0.22}s`,
+                            animationDuration: `${4.6 + (idx % 5) * 0.35}s`,
+                          }}
+                          title={`${entry.name || typeInfo.label} · ${formatTime(entry.createdAt)}`}
+                        >
+                          <div className="cafino-drink-sticker">
+                            {entry.photo ? (
+                              <Image
+                                src={entry.photo}
+                                alt={entry.name || typeInfo.label}
+                                width={124}
+                                height={124}
+                                className="h-28 w-28 object-contain"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="flex h-28 w-28 items-center justify-center">
+                                <DrinkTypeIcon type={typeInfo} size={108} className="h-24 w-24 object-contain" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
 
             <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
               <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
@@ -892,7 +1589,7 @@ export function CafinoOnlineApp() {
                 </div>
                 <div>
                   <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Spend</p>
-                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.reduce((s, l) => s + l.price, 0).toFixed(0)}</p>
+                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{formatPeso(statsLogs.reduce((s, l) => s + l.price, 0))}</p>
                 </div>
               </div>
             </div>
@@ -925,9 +1622,9 @@ export function CafinoOnlineApp() {
 
             <div className="cafino-surface rounded-3xl bg-white p-4 sm:p-5">
               <p className="mb-4 text-base text-[var(--cafino-text)] sm:text-lg">Daily Cups</p>
-              <div className="h-48 w-full">
-                {hasBarData ? (
-                  <ResponsiveContainer width="100%" height="100%">
+              <div ref={statsChartHostRef} className="h-48 w-full min-w-0">
+                {hasBarData && statsChartReady ? (
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
                     <BarChart data={barData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--cafino-chart-grid)" />
                       <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "color-mix(in oklab, var(--cafino-accent) 35%, #999)", fontSize: 11 }} />
@@ -1009,14 +1706,6 @@ export function CafinoOnlineApp() {
                 )}
               </label>
 
-              <button
-                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
-                onClick={() => setShowWidgetsSheet(true)}
-              >
-                <p className="text-2xl font-semibold leading-none text-[var(--cafino-text)] sm:text-3xl">Widgets</p>
-                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">See how to add Cafino widget to your home screen</p>
-              </button>
-
               <div className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 sm:p-5">
                 <p className="text-2xl font-semibold leading-none sm:text-3xl">Share Cards</p>
                 <div className="mt-4 flex items-center justify-between">
@@ -1036,7 +1725,7 @@ export function CafinoOnlineApp() {
                 className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
                 onClick={() => setShowBrandSheet(true)}
               >
-                <p className="truncate text-xl font-semibold leading-none sm:text-2xl">Brand Management</p>
+                <p className="truncate text-xl font-semibold leading-none sm:text-2xl">Brands</p>
                 <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Manage custom brands</p>
               </button>
 
@@ -1052,76 +1741,58 @@ export function CafinoOnlineApp() {
         )}
       </div>
 
-      <nav className="grid grid-cols-3 border-t border-[var(--cafino-border)] bg-[var(--cafino-soft)] py-2" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
-        <button className={`flex flex-col items-center py-2 text-sm ${activeTab === "home" ? "font-bold text-[var(--cafino-accent-strong)]" : "text-[var(--cafino-text-muted)]"}`} onClick={() => setActiveTab("home")}>
-          <Coffee size={28} />
+      <nav
+        className="mt-auto grid grid-cols-3 gap-1 border-t border-[var(--cafino-border)] bg-[color-mix(in_oklab,var(--cafino-soft)_86%,white)] px-2 pt-2 sm:gap-2 sm:px-3"
+        style={{
+          paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+          paddingLeft: "max(0.5rem, env(safe-area-inset-left))",
+          paddingRight: "max(0.5rem, env(safe-area-inset-right))",
+        }}
+      >
+        <button
+          className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
+            activeTab === "home"
+              ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
+              : "text-[var(--cafino-text-muted)]"
+          }`}
+          aria-label="Home"
+          onClick={() => setActiveTab("home")}
+        >
+          <Coffee size={22} className="min-[360px]:h-6 min-[360px]:w-6" />
+          <span>Home</span>
         </button>
-        <button className={`flex flex-col items-center py-2 text-sm ${activeTab === "stats" ? "font-bold text-[var(--cafino-accent-strong)]" : "text-[var(--cafino-text-muted)]"}`} onClick={() => setActiveTab("stats")}>
-          <BarChart3 size={28} />
+        <button
+          className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
+            activeTab === "stats"
+              ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
+              : "text-[var(--cafino-text-muted)]"
+          }`}
+          aria-label="Stats"
+          onClick={() => setActiveTab("stats")}
+        >
+          <BarChart3 size={22} className="min-[360px]:h-6 min-[360px]:w-6" />
+          <span>Stats</span>
         </button>
-        <button className={`flex flex-col items-center py-2 text-sm ${activeTab === "settings" ? "font-bold text-[var(--cafino-accent-strong)]" : "text-[var(--cafino-text-muted)]"}`} onClick={() => setActiveTab("settings")}>
-          <Settings size={28} />
+        <button
+          className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
+            activeTab === "settings"
+              ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
+              : "text-[var(--cafino-text-muted)]"
+          }`}
+          aria-label="Settings"
+          onClick={() => setActiveTab("settings")}
+        >
+          <Settings size={22} className="min-[360px]:h-6 min-[360px]:w-6" />
+          <span>Settings</span>
         </button>
       </nav>
-
-      {showWidgetsSheet && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/35 p-2">
-          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-3xl bg-[#efeeec] duration-300 sm:max-w-[720px]">
-            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-[#efeeec] px-4 py-3 sm:px-5">
-              <button className="text-2xl text-[var(--cafino-text-muted)]" onClick={() => setShowWidgetsSheet(false)}>Cancel</button>
-              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Add Widgets</p>
-              <span className="w-16" />
-            </div>
-
-            <div className="space-y-4 p-4 sm:p-5">
-              <p className="text-2xl leading-tight text-[var(--cafino-text)] sm:text-3xl">Follow these steps to add 'Cafino' to your home screen</p>
-
-              <article className="rounded-3xl bg-white/85 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] sm:p-5">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#9a855f]">
-                    <Hand size={22} />
-                  </span>
-                  <div>
-                    <h3 className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Long press home screen</h3>
-                    <p className="mt-2 text-[1.25rem] leading-snug text-[var(--cafino-text-muted)] sm:text-[1.35rem]">Long press on an empty area of home screen until app icons start shaking</p>
-                  </div>
-                </div>
-              </article>
-
-              <article className="rounded-3xl bg-white/85 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] sm:p-5">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#9a855f]">
-                    <SquarePen size={22} />
-                  </span>
-                  <div>
-                    <h3 className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Tap 'Edit' {"->"} 'Add Widget'</h3>
-                    <p className="mt-2 text-[1.25rem] leading-snug text-[var(--cafino-text-muted)] sm:text-[1.35rem]">Tap 'Edit' on top left, then select 'Add Widget'</p>
-                  </div>
-                </div>
-              </article>
-
-              <article className="rounded-3xl bg-white/85 p-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] sm:p-5">
-                <div className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f7f4ef] text-[#9a855f]">
-                    <Search size={22} />
-                  </span>
-                  <div>
-                    <h3 className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Search for 'Cafino'</h3>
-                    <p className="mt-2 text-[1.25rem] leading-snug text-[var(--cafino-text-muted)] sm:text-[1.35rem]">Type 'Cafino' in search box, find and add the widget</p>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showBrandSheet && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/35 p-2">
           <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-3xl bg-[#efeeec] duration-300 sm:max-w-[720px]">
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-[#efeeec] px-4 py-3 sm:px-5">
               <button className="text-2xl text-[var(--cafino-text-muted)]" onClick={() => setShowBrandSheet(false)}>Cancel</button>
-              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Brand Management</p>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Brands</p>
               <span className="w-16" />
             </div>
 
@@ -1293,13 +1964,17 @@ export function CafinoOnlineApp() {
                     if (feedbackSent) {
                       setFeedbackSent(false);
                     }
+                    if (feedbackError) {
+                      setFeedbackError(null);
+                    }
                   }}
                   placeholder="Tell me what to improve, what you love, and what you want next..."
                   className="min-h-28 w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3"
                 />
-                {feedbackSent ? <p className="mt-2 text-sm text-[var(--cafino-accent-strong)]">Thanks! Your email draft was prepared.</p> : null}
-                <button className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-white" onClick={onSendFeedback}>
-                  <SendHorizontal size={16} /> Send Feedback
+                {feedbackSent ? <p className="mt-2 text-sm text-[var(--cafino-accent-strong)]">Thanks! Feedback sent successfully.</p> : null}
+                {feedbackError ? <p className="mt-2 text-sm text-[var(--cafino-danger)]">{feedbackError}</p> : null}
+                <button className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={onSendFeedback} disabled={feedbackSending || !feedbackText.trim()}>
+                  <SendHorizontal size={16} /> {feedbackSending ? "Sending..." : "Send Feedback"}
                 </button>
               </section>
 
@@ -1429,7 +2104,7 @@ export function CafinoOnlineApp() {
               <div className="cafino-surface rounded-2xl bg-white p-4 text-sm text-[var(--cafino-text-muted)]">No records on this date.</div>
             ) : (
               logsForSelectedDay.map((entry) => {
-                const typeInfo = COFFEE_TYPES.find((t) => t.id === entry.type) ?? COFFEE_TYPES[0];
+                const typeInfo = findCoffeeType(entry.type);
                 return (
                   <div key={`detail-${entry.id}`} className="cafino-surface mb-2 flex items-center gap-3 rounded-2xl bg-white p-3">
                     {entry.photo ? (
@@ -1518,12 +2193,161 @@ export function CafinoOnlineApp() {
                 </button>
               </div>
 
+              {draft.homemade && (
+                <>
+                  <div className="rounded-3xl border border-[var(--cafino-border)] bg-white p-4">
+                    <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Brand</label>
+                    <div className="flex flex-wrap gap-2">
+                      {["Others", ...brands.map((item) => item.name)].map((name) => (
+                        <button
+                          key={`homemade-brand-${name}`}
+                          className={`rounded-xl border px-3 py-2 text-sm ${draft.homemadeBrand === name ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-soft-strong)] text-[var(--cafino-accent-strong)]" : "border-[var(--cafino-border)] bg-white text-[var(--cafino-text)]"}`}
+                          onClick={() => setDraft((prev) => ({ ...prev, homemadeBrand: name }))}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-[var(--cafino-border)] bg-white p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-2xl font-semibold">Coffee Beans</p>
+                      <button
+                        className="rounded-full border border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-3 py-1 text-base font-medium text-[var(--cafino-accent-strong)]"
+                        onClick={() => setShowBeanTemplatesSheet(true)}
+                      >
+                        Templates
+                      </button>
+                    </div>
+
+                    <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Bean</label>
+                    <input
+                      value={draft.beanName}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, beanName: e.target.value }))}
+                      placeholder="e.g., Ethiopian Yirgacheffe"
+                      className="mb-3 w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3"
+                    />
+
+                    <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Origin</label>
+                    <input
+                      value={draft.beanOrigin}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, beanOrigin: e.target.value }))}
+                      placeholder="e.g., Ethiopia, Colombia"
+                      className="mb-3 w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3"
+                    />
+
+                    <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Roast</label>
+                    <div className="mb-3 grid grid-cols-3 gap-2">
+                      {(["Light", "Medium", "Dark"] as RoastLevel[]).map((roast) => (
+                        <button
+                          key={roast}
+                          className={`rounded-xl border px-2 py-2 text-sm ${draft.beanRoast === roast ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-accent-strong)] text-white" : "border-[var(--cafino-border)] bg-white"}`}
+                          onClick={() => setDraft((prev) => ({ ...prev, beanRoast: roast }))}
+                        >
+                          {roast}
+                        </button>
+                      ))}
+                    </div>
+
+                    <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Flavor</label>
+                    <input
+                      value={draft.beanFlavor}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, beanFlavor: e.target.value }))}
+                      placeholder="e.g., citrus, floral, chocolate"
+                      className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3"
+                    />
+                  </div>
+
+                  <div className="rounded-3xl border border-[var(--cafino-border)] bg-white p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-2xl font-semibold">Brewing Details</p>
+                      <button
+                        className="rounded-full border border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-3 py-1 text-base font-medium text-[var(--cafino-accent-strong)]"
+                        onClick={() => setShowBrewTemplatesSheet(true)}
+                      >
+                        Templates
+                      </button>
+                    </div>
+
+                    <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Method</label>
+                    <input
+                      value={draft.brewMethod}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, brewMethod: e.target.value }))}
+                      placeholder="e.g., V60, French Press, AeroPress"
+                      className="mb-3 w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3"
+                    />
+
+                    <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Grind</label>
+                    <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                      {["Extra Fine", "Fine", "Medium Fine", "Medium", "Medium Coarse", "Coarse"].map((grind) => (
+                        <button
+                          key={grind}
+                          className={`shrink-0 rounded-xl border px-3 py-2 text-sm ${draft.brewGrind === grind ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-accent-strong)] text-white" : "border-[var(--cafino-border)] bg-white"}`}
+                          onClick={() => setDraft((prev) => ({ ...prev, brewGrind: grind }))}
+                        >
+                          {grind}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Dose (g)</label>
+                        <input
+                          type="number"
+                          value={draft.brewDose || ""}
+                          onChange={(e) => setDraft((prev) => ({ ...prev, brewDose: Number(e.target.value) || 0 }))}
+                          className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-[var(--cafino-text)]">Water (ml)</label>
+                        <input
+                          type="number"
+                          value={draft.brewWater || ""}
+                          onChange={(e) => setDraft((prev) => ({ ...prev, brewWater: Number(e.target.value) || 0 }))}
+                          className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="mb-2 mt-3 block text-sm font-medium text-[var(--cafino-text)]">Brew Time</label>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <input
+                        type="number"
+                        value={draft.brewTime || ""}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, brewTime: Number(e.target.value) || 0 }))}
+                        className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3"
+                      />
+                      <select
+                        value={draft.brewTimeUnit}
+                        onChange={(e) => setDraft((prev) => ({ ...prev, brewTimeUnit: e.target.value as BrewTimeUnit }))}
+                        className="rounded-2xl border border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-3 py-3"
+                      >
+                        <option value="s">s</option>
+                        <option value="m">m</option>
+                        <option value="h">h</option>
+                      </select>
+                    </div>
+
+                    <label className="mb-2 mt-3 block text-sm font-medium text-[var(--cafino-text)]">Brewing Notes</label>
+                    <textarea
+                      value={draft.brewNotes}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, brewNotes: e.target.value }))}
+                      placeholder="Brewing technique, observations..."
+                      className="min-h-20 w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3"
+                    />
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Drink Type</label>
                 <div className="overflow-x-auto pb-1">
                   <div className="flex gap-2">
-                  {COFFEE_TYPES.map((item) => (
-                    <button key={item.id} className={`min-w-[86px] rounded-xl border px-2 py-2 text-xs ${draft.type === item.id ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-surface-2)]" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => onTypeChange(item.id as CoffeeTypeId)}>
+                  {allCoffeeTypes.map((item) => (
+                    <button key={item.id} className={`min-w-[86px] rounded-xl border px-2 py-2 text-xs ${draft.type === item.id ? "border-[var(--cafino-accent-strong)] bg-[var(--cafino-surface-2)]" : "border-[var(--cafino-border)] bg-white"}`} onClick={() => onTypeChange(item.id)}>
                       <div className="mb-1 flex items-center justify-center">
                         <DrinkTypeIcon type={item} size={26} className="h-6 w-6 object-contain" />
                       </div>
@@ -1552,7 +2376,7 @@ export function CafinoOnlineApp() {
               <input type="range" min={0} max={100} value={draft.sugar} onChange={(e) => setDraft((prev) => ({ ...prev, sugar: Number(e.target.value) }))} className="w-full" />
 
               <div>
-                <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Price (Optional)</label>
+                <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Price (Optional, ₱)</label>
                 <input type="number" value={draft.price || ""} onChange={(e) => setDraft((prev) => ({ ...prev, price: Number(e.target.value) || 0 }))} placeholder="" className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3" />
               </div>
 
@@ -1566,6 +2390,207 @@ export function CafinoOnlineApp() {
                 </div>
               </div>
               <textarea value={draft.note} onChange={(e) => setDraft((prev) => ({ ...prev, note: e.target.value }))} placeholder="Morning ritual, with friends..." className="min-h-24 w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-3 py-3" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBeanTemplatesSheet && (
+        <div className="fixed inset-0 z-[60] flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-4 py-3">
+              <button className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl" onClick={() => setShowBeanTemplatesSheet(false)}>Cancel</button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Select Beans</p>
+              <span className="w-12" />
+            </div>
+
+            <div className="space-y-3 p-4">
+              <button
+                className="flex w-full items-center gap-3 rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3 text-left text-xl font-medium text-[var(--cafino-accent-strong)]"
+                onClick={onSaveCurrentBeanTemplate}
+              >
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--cafino-accent)] text-white">
+                  <Plus size={18} />
+                </span>
+                Add New Bean Template
+              </button>
+
+              <p className="px-1 text-sm uppercase tracking-[0.16em] text-[var(--cafino-text-muted)]">Bean Templates</p>
+
+              <div className="divide-y divide-[var(--cafino-border)] overflow-hidden rounded-2xl border border-[var(--cafino-border)] bg-white">
+                {beanTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    className="w-full px-4 py-3 text-left"
+                    onClick={() => applyBeanTemplate(template)}
+                  >
+                    <p className="text-2xl font-semibold text-[var(--cafino-text)]">{template.name}</p>
+                    <p className="mt-1 text-base text-[var(--cafino-text-muted)]">{template.origin} · {template.roast || "Medium"}</p>
+                    <p className="mt-1 text-base text-[var(--cafino-text-muted)]">{template.flavor}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBrewTemplatesSheet && (
+        <div className="fixed inset-0 z-[60] flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-4 py-3">
+              <button className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl" onClick={() => setShowBrewTemplatesSheet(false)}>Cancel</button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Select Brewing Method</p>
+              <span className="w-12" />
+            </div>
+
+            <div className="space-y-3 p-4">
+              <button
+                className="flex w-full items-center gap-3 rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3 text-left text-xl font-medium text-[var(--cafino-accent-strong)]"
+                onClick={onSaveCurrentBrewTemplate}
+              >
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--cafino-accent)] text-white">
+                  <Plus size={18} />
+                </span>
+                Add New Bean Template
+              </button>
+
+              <p className="px-1 text-sm uppercase tracking-[0.16em] text-[var(--cafino-text-muted)]">Brew Templates</p>
+
+              <div className="divide-y divide-[var(--cafino-border)] overflow-hidden rounded-2xl border border-[var(--cafino-border)] bg-white">
+                {brewTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    className="w-full px-4 py-3 text-left"
+                    onClick={() => applyBrewTemplate(template)}
+                  >
+                    <p className="text-2xl font-semibold text-[var(--cafino-text)]">{template.label}</p>
+                    <div className="mt-1 grid grid-cols-2 gap-1 text-base text-[var(--cafino-text-muted)] min-[420px]:grid-cols-4">
+                      <p>Grind: {template.grind}</p>
+                      <p>Dose: {template.dose}g</p>
+                      <p>Water: {template.water}ml</p>
+                      <p>Time: {template.time} {template.unit}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNewCoffeeTypeSheet && (
+        <div className="fixed inset-0 z-[70] flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-4 py-3">
+              <button
+                className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl"
+                onClick={() => {
+                  setShowNewCoffeeTypeSheet(false);
+                  setNewCoffeeTypeDraft({ name: "", order: "", emoji: "☕", caffeine: 75, sugar: 0 });
+                }}
+              >
+                Cancel
+              </button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">New Coffee Type</p>
+              <button className="text-xl text-[var(--cafino-accent-strong)] disabled:opacity-40 sm:text-2xl" onClick={onSaveNewCoffeeType} disabled={!newCoffeeTypeDraft.name.trim()}>
+                Save
+              </button>
+            </div>
+
+            <div className="space-y-4 p-4">
+              <button className="mx-auto flex w-full max-w-[280px] flex-col items-center" onClick={() => setShowTypeIconSheet(true)}>
+                <span className="flex h-44 w-44 items-center justify-center rounded-full bg-[var(--cafino-surface-2)] text-7xl">{newCoffeeTypeDraft.emoji}</span>
+                <span className="mt-3 text-xl text-[var(--cafino-text-muted)]">Tap to change icon</span>
+              </button>
+
+              <div>
+                <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Coffee Name</label>
+                <input
+                  value={newCoffeeTypeDraft.name}
+                  onChange={(event) => setNewCoffeeTypeDraft((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="e.g., Cappuccino, Cold Brew"
+                  className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Order</label>
+                <input
+                  type="number"
+                  value={newCoffeeTypeDraft.order}
+                  onChange={(event) => setNewCoffeeTypeDraft((prev) => ({ ...prev, order: event.target.value }))}
+                  placeholder="e.g. 0, 99"
+                  className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-[var(--cafino-border)] bg-white p-4">
+                <label className="block text-xl text-[var(--cafino-text-muted)]">Default Caffeine: <span className="font-semibold text-[var(--cafino-accent-strong)]">{newCoffeeTypeDraft.caffeine} mg</span></label>
+                <input
+                  type="range"
+                  min={0}
+                  max={200}
+                  value={newCoffeeTypeDraft.caffeine}
+                  onChange={(event) => setNewCoffeeTypeDraft((prev) => ({ ...prev, caffeine: Number(event.target.value) }))}
+                  className="mt-3 w-full"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-[var(--cafino-border)] bg-white p-4">
+                <label className="block text-xl text-[var(--cafino-text-muted)]">Default Sugar: <span className="font-semibold text-[var(--cafino-accent-strong)]">{newCoffeeTypeDraft.sugar} g</span></label>
+                <input
+                  type="range"
+                  min={0}
+                  max={80}
+                  value={newCoffeeTypeDraft.sugar}
+                  onChange={(event) => setNewCoffeeTypeDraft((prev) => ({ ...prev, sugar: Number(event.target.value) }))}
+                  className="mt-3 w-full"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTypeIconSheet && (
+        <div className="fixed inset-0 z-[80] flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-[var(--cafino-soft-alt)] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--cafino-border)] bg-[var(--cafino-soft-alt)] px-4 py-3">
+              <span className="w-14" />
+              <p className="text-2xl font-semibold text-[var(--cafino-text)] sm:text-3xl">Select Icon</p>
+              <button className="text-xl text-[var(--cafino-accent-strong)] sm:text-2xl" onClick={() => setShowTypeIconSheet(false)}>Done</button>
+            </div>
+
+            <div className="space-y-4 p-4">
+              <div className="flex flex-col items-center">
+                <span className="text-8xl">{newCoffeeTypeDraft.emoji}</span>
+                <p className="mt-2 text-xl text-[var(--cafino-text-muted)]">Selected Icon</p>
+              </div>
+
+              <input
+                value={newCoffeeTypeDraft.emoji}
+                onChange={(event) => setNewCoffeeTypeDraft((prev) => ({ ...prev, emoji: event.target.value }))}
+                placeholder="Other Emoji..."
+                inputMode="text"
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full rounded-2xl border border-[var(--cafino-border)] bg-white px-4 py-3 text-center text-3xl"
+              />
+              <p className="text-center text-sm text-[var(--cafino-text-muted)]">Type or paste any emoji.</p>
+
+              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Choose an Icon</p>
+              <div className="grid grid-cols-5 gap-2 min-[420px]:grid-cols-6">
+                {DEFAULT_TYPE_ICONS.map((emoji) => (
+                  <button
+                    key={`icon-${emoji}`}
+                    className={`flex h-14 items-center justify-center rounded-xl border bg-white text-3xl ${newCoffeeTypeDraft.emoji === emoji ? "border-[3px] border-[var(--cafino-accent-strong)]" : "border-[var(--cafino-border)]"}`}
+                    onClick={() => setNewCoffeeTypeDraft((prev) => ({ ...prev, emoji }))}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
