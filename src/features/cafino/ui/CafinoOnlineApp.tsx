@@ -6,7 +6,7 @@ import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Heart, MessageCir
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
-import { useCafinoStore } from "@/features/cafino/store/useCafinoStore";
+import { type TabName, useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { CAFINO_THEMES, getThemeChoice } from "@/features/cafino/theme/themes";
 
 interface CoffeeTypeOption {
@@ -1265,6 +1265,13 @@ export function CafinoOnlineApp() {
         ? "Install on iPhone"
         : "Install App";
 
+  const onTabChange = (tab: TabName) => {
+    if (tab === activeTab) {
+      return;
+    }
+    setActiveTab(tab);
+  };
+
   if (!started) {
     return (
       <main className="cafino-app cafino-compact cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-3.5 sm:p-5" style={themeVars}>
@@ -1333,7 +1340,7 @@ export function CafinoOnlineApp() {
   }
 
   return (
-    <main className="cafino-app cafino-compact cafino-frame flex w-full flex-col bg-[var(--cafino-soft)]" style={themeVars}>
+    <main className="cafino-app cafino-compact cafino-frame flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-[var(--cafino-soft)]" style={themeVars}>
       <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
         {activeTab === "home" && (
           <section>
@@ -1685,7 +1692,7 @@ export function CafinoOnlineApp() {
               <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">FDA recommends 400mg per day for healthy adults</p>
             </div>
 
-            <div className="mb-3 grid grid-cols-2 gap-3">
+            <div className="mb-3 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
               <button
                 className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
                 onClick={() => setShowThemeSheet(true)}
@@ -1748,7 +1755,7 @@ export function CafinoOnlineApp() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
               <button
                 className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
                 onClick={() => setShowFeedbackSheet(true)}
@@ -1778,37 +1785,40 @@ export function CafinoOnlineApp() {
         }}
       >
         <button
+          type="button"
           className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
             activeTab === "home"
               ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
               : "text-[var(--cafino-text-muted)]"
           }`}
           aria-label="Home"
-          onClick={() => setActiveTab("home")}
+          onClick={() => onTabChange("home")}
         >
           <Coffee size={22} className="min-[360px]:h-6 min-[360px]:w-6" />
           <span>Home</span>
         </button>
         <button
+          type="button"
           className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
             activeTab === "stats"
               ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
               : "text-[var(--cafino-text-muted)]"
           }`}
           aria-label="Stats"
-          onClick={() => setActiveTab("stats")}
+          onClick={() => onTabChange("stats")}
         >
           <BarChart3 size={22} className="min-[360px]:h-6 min-[360px]:w-6" />
           <span>Stats</span>
         </button>
         <button
+          type="button"
           className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
             activeTab === "settings"
               ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
               : "text-[var(--cafino-text-muted)]"
           }`}
           aria-label="Settings"
-          onClick={() => setActiveTab("settings")}
+          onClick={() => onTabChange("settings")}
         >
           <Settings size={22} className="min-[360px]:h-6 min-[360px]:w-6" />
           <span>Settings</span>
