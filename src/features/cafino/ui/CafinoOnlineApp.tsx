@@ -403,6 +403,7 @@ export function CafinoOnlineApp() {
   const selectedDaySugar = logsForSelectedDay.reduce((sum, entry) => sum + entry.sugar, 0);
   const selectedDateLabel = formatDateCard(selectedDate);
   const selectedDateDayName = selectedDateLabel.split(",")[0] ?? "";
+  const selectedDateShort = selectedDateLabel.split(", ").slice(1).join(", ") || selectedDateLabel;
   const activeThemeChoice = getThemeChoice(themeId);
   const themeVars = {
     "--cafino-accent": activeThemeChoice.accent,
@@ -869,13 +870,15 @@ export function CafinoOnlineApp() {
       ctx.roundRect(stickerX, stickerY, stickerSize, stickerSize, 42);
       ctx.stroke();
 
-      if (sticker.imageSrc) {
+      const stickerImageSrc = sticker.imageSrc;
+
+      if (stickerImageSrc) {
         try {
           const image = await new Promise<HTMLImageElement>((resolve, reject) => {
             const img = new window.Image();
             img.onload = () => resolve(img);
             img.onerror = () => reject(new Error("Failed to load sticker image"));
-            img.src = sticker.imageSrc;
+            img.src = stickerImageSrc;
           });
 
           ctx.save();
