@@ -303,6 +303,7 @@ export function CafinoOnlineApp() {
   const [showBrandSheet, setShowBrandSheet] = useState(false);
   const [showAddBrandSheet, setShowAddBrandSheet] = useState(false);
   const [showDeveloperSheet, setShowDeveloperSheet] = useState(false);
+  const [showFeedbackSheet, setShowFeedbackSheet] = useState(false);
   const [showBeanTemplatesSheet, setShowBeanTemplatesSheet] = useState(false);
   const [showBrewTemplatesSheet, setShowBrewTemplatesSheet] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
@@ -1569,7 +1570,7 @@ export function CafinoOnlineApp() {
                       return (
                         <div
                           key={entry.id}
-                          className="cafino-cup-sway flex h-40 min-w-[6.2rem] shrink-0 items-center justify-center rounded-2xl bg-[var(--cafino-surface-2)]"
+                          className="cafino-cup-sway flex h-40 min-w-[6.2rem] shrink-0 items-center justify-center"
                           style={{
                             animationDelay: `${(idx % 8) * 0.22}s`,
                             animationDuration: `${4.6 + (idx % 5) * 0.35}s`,
@@ -1737,15 +1738,23 @@ export function CafinoOnlineApp() {
                   </button>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
               <button
                 className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
                 onClick={() => setShowBrandSheet(true)}
               >
                 <p className="truncate text-xl font-semibold leading-none sm:text-2xl">Brands</p>
                 <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Manage custom brands</p>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                className="cafino-surface rounded-[28px] border border-[var(--cafino-border)] bg-white p-4 text-left sm:p-5"
+                onClick={() => setShowFeedbackSheet(true)}
+              >
+                <p className="truncate text-xl font-semibold leading-none sm:text-2xl">Feedback</p>
+                <p className="mt-2 text-sm text-[var(--cafino-text-muted)] sm:text-base">Share ideas and improvements</p>
               </button>
 
               <button
@@ -1972,9 +1981,40 @@ export function CafinoOnlineApp() {
               </section>
 
               <section className="rounded-3xl bg-white p-4 sm:p-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <Heart className="text-[var(--cafino-accent)]" size={18} />
+                  <p className="text-xl font-semibold text-[var(--cafino-text)]">Buy Me a Matcha</p>
+                </div>
+                <p className="text-sm text-[var(--cafino-text-muted)]">If Cafino helps your daily routine, you can support development with a small donation.</p>
+                <a
+                  href={DONATION_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-[var(--cafino-accent-strong)]"
+                >
+                  <UserRound size={16} /> Donate
+                </a>
+                <p className="mt-2 text-xs text-[var(--cafino-text-subtle)]">Replace donation link in code when your final page is ready.</p>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFeedbackSheet && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/35 p-2">
+          <div className="cafino-sheet animate-in slide-in-from-bottom-4 fade-in mx-auto max-h-[94dvh] w-full overflow-y-auto rounded-3xl bg-[#efeeec] duration-300 sm:max-w-[720px]">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-[#efeeec] px-4 py-3 sm:px-5">
+              <button className="text-2xl text-[var(--cafino-text-muted)]" onClick={() => setShowFeedbackSheet(false)}>Cancel</button>
+              <p className="text-2xl font-semibold text-[var(--cafino-text)]">Feedback</p>
+              <span className="w-16" />
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-5">
+              <section className="rounded-3xl bg-white p-4 sm:p-5">
                 <div className="mb-3 flex items-center gap-2">
                   <MessageCircle className="text-[var(--cafino-accent)]" size={18} />
-                  <p className="text-xl font-semibold text-[var(--cafino-text)]">Feedback</p>
+                  <p className="text-xl font-semibold text-[var(--cafino-text)]">Tell us what to improve</p>
                 </div>
                 <textarea
                   value={feedbackText}
@@ -1995,23 +2035,6 @@ export function CafinoOnlineApp() {
                 <button className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={onSendFeedback} disabled={feedbackSending || !feedbackText.trim()}>
                   <SendHorizontal size={16} /> {feedbackSending ? "Sending..." : "Send Feedback"}
                 </button>
-              </section>
-
-              <section className="rounded-3xl bg-white p-4 sm:p-5">
-                <div className="mb-2 flex items-center gap-2">
-                  <Heart className="text-[var(--cafino-accent)]" size={18} />
-                  <p className="text-xl font-semibold text-[var(--cafino-text)]">Buy Me a Matcha</p>
-                </div>
-                <p className="text-sm text-[var(--cafino-text-muted)]">If Cafino helps your daily routine, you can support development with a small donation.</p>
-                <a
-                  href={DONATION_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-2 rounded-2xl border border-[var(--cafino-accent)] px-4 py-2 text-sm font-semibold text-[var(--cafino-accent-strong)]"
-                >
-                  <UserRound size={16} /> Donate
-                </a>
-                <p className="mt-2 text-xs text-[var(--cafino-text-subtle)]">Replace donation link in code when your final page is ready.</p>
               </section>
             </div>
           </div>
