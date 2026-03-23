@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Heart, MessageCircle, Plus, SendHorizontal, Settings, Share, UserRound } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
@@ -276,6 +277,7 @@ function defaultDraft(date: string, initialType: CoffeeTypeId = COFFEE_TYPES[0].
 }
 
 export function CafinoOnlineApp() {
+  const router = useRouter();
   const started = useCafinoStore((s) => s.started);
   const setStarted = useCafinoStore((s) => s.setStarted);
   const activeTab = useCafinoStore((s) => s.activeTab);
@@ -1215,7 +1217,7 @@ export function CafinoOnlineApp() {
 
   const onInstallApp = async () => {
     if (!installPromptEvent) {
-      return;
+      return false;
     }
 
     setInstallingApp(true);
@@ -1226,8 +1228,10 @@ export function CafinoOnlineApp() {
     setInstallingApp(false);
 
     if (choice.outcome === "dismissed") {
-      return;
+      return false;
     }
+
+    return true;
   };
 
   const onInstallEntry = async () => {
@@ -1237,8 +1241,10 @@ export function CafinoOnlineApp() {
     }
 
     if (installPromptEvent) {
-      await onInstallApp();
-      setStarted(true);
+      const accepted = await onInstallApp();
+      if (accepted) {
+        router.push("/thank-you-installed");
+      }
       return;
     }
 
@@ -1406,21 +1412,31 @@ export function CafinoOnlineApp() {
               </div>
             </div>
 
-            <div className="mb-3.5 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
-              <button
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[var(--cafino-border)] bg-white text-base font-semibold text-[var(--cafino-text)] disabled:opacity-45 sm:h-12 sm:text-lg"
-                onClick={() => openAdd(selectedDate)}
-                disabled={logsForSelectedDay.length === 0}
-              >
-                Edit Cup
-              </button>
-              <button
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--cafino-accent)] text-base font-semibold text-white sm:h-12 sm:text-lg"
-                onClick={() => openAddAnother(dayKey)}
-              >
-                <Plus size={22} /> Add Another Cup for Today
-              </button>
-            </div>
+            {logsForSelectedDay.length === 0 ? (
+              <div className="mb-3.5">
+                <button
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--cafino-accent)] text-base font-semibold text-white sm:h-12 sm:text-lg"
+                  onClick={() => openAdd(selectedDate)}
+                >
+                  <Plus size={22} /> Add Cup
+                </button>
+              </div>
+            ) : (
+              <div className="mb-3.5 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+                <button
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[var(--cafino-border)] bg-white text-base font-semibold text-[var(--cafino-text)] sm:h-12 sm:text-lg"
+                  onClick={() => openAdd(selectedDate)}
+                >
+                  Edit Cup
+                </button>
+                <button
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--cafino-accent)] text-base font-semibold text-white sm:h-12 sm:text-lg"
+                  onClick={() => openAddAnother(dayKey)}
+                >
+                  <Plus size={22} /> Add Another Cup for Today
+                </button>
+              </div>
+            )}
 
             <h3 className="mb-2 text-lg font-bold min-[360px]:text-xl sm:text-2xl">Today's drink</h3>
             <div className="cafino-surface mb-3 rounded-2xl bg-white p-3.5 sm:p-4">
