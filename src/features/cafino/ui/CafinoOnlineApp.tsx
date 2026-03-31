@@ -6,6 +6,7 @@ import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Heart, MessageCir
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
+import AccelerometerCoffeePhysics from "@/components/ui/AccelerometerCoffeePhysics";
 import CupStickerUploader from "@/components/ui/CupStickerUploader";
 import { type TabName, useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { CAFINO_THEMES, getThemeChoice } from "@/features/cafino/theme/themes";
@@ -52,7 +53,6 @@ type CoffeeTypeId = string;
 
 const SIZE_CAFFEINE: Record<string, number> = { Small: 0.75, Medium: 1, Large: 1.3, XL: 1.6 };
 const MONTH_SHORT = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const ACTION_WIDTH = 170;
 const DEV_NAME = "Gayle Monique Florencio";
 const DEV_ROLE = "Developer";
 const DEV_LOCATION = "Philippines";
@@ -385,13 +385,6 @@ export function CafinoOnlineApp() {
   const [isIosSafari, setIsIosSafari] = useState(false);
   const [dismissedIosInstallHint, setDismissedIosInstallHint] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayKey());
-  const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
-  const dragRef = useRef<{ id: string | null; startX: number; base: number; pointerId: number | null }>({
-    id: null,
-    startX: 0,
-    base: 0,
-    pointerId: null,
-  });
   const statsChartHostRef = useRef<HTMLDivElement | null>(null);
   const [statsChartReady, setStatsChartReady] = useState(false);
   const allCoffeeTypes = useMemo<CoffeeTypeOption[]>(() => {
@@ -535,6 +528,13 @@ export function CafinoOnlineApp() {
       logs: weekLogs,
     };
   }, [logs, statsWeekOffset]);
+  const statsPhysicsLogs = useMemo(() => {
+    if (statsPeriod === "week") {
+      return weeklyCupView.logs;
+    }
+
+    return statsLogs;
+  }, [statsPeriod, statsLogs, weeklyCupView.logs]);
   const statsSummary = useMemo(() => {
     const totals = statsLogs.reduce(
       (acc, item) => {
@@ -554,6 +554,21 @@ export function CafinoOnlineApp() {
     };
   }, [statsLogs]);
   const showIosInstallHint = isIosSafari && !isStandaloneMode && !dismissedIosInstallHint;
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    let themeMeta = document.querySelector<HTMLMetaElement>("meta[name='theme-color']");
+    if (!themeMeta) {
+      themeMeta = document.createElement("meta");
+      themeMeta.setAttribute("name", "theme-color");
+      document.head.appendChild(themeMeta);
+    }
+
+    themeMeta.setAttribute("content", activeThemeChoice.accent);
+  }, [activeThemeChoice.accent]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof navigator === "undefined") {
@@ -841,36 +856,6 @@ export function CafinoOnlineApp() {
     setNewCoffeeTypeDraft({ name: "", order: "", emoji: "☕", caffeine: 75, sugar: 0 });
   };
 
-  const onSwipeStart = (id: string, clientX: number, pointerId: number) => {
-    dragRef.current = {
-      id,
-      startX: clientX,
-      base: swipeOffsets[id] ?? 0,
-      pointerId,
-    };
-  };
-
-  const onSwipeMove = (clientX: number, pointerId: number) => {
-    const drag = dragRef.current;
-    if (!drag.id || drag.pointerId !== pointerId) {
-      return;
-    }
-
-    const nextOffset = Math.max(-ACTION_WIDTH, Math.min(0, drag.base + clientX - drag.startX));
-    setSwipeOffsets({ [drag.id]: nextOffset });
-  };
-
-  const onSwipeEnd = (pointerId?: number) => {
-    const drag = dragRef.current;
-    if (!drag.id || (typeof pointerId === "number" && drag.pointerId !== pointerId)) {
-      return;
-    }
-
-    const value = swipeOffsets[drag.id] ?? 0;
-    setSwipeOffsets(value <= -ACTION_WIDTH / 3 ? { [drag.id]: -ACTION_WIDTH } : {});
-    dragRef.current = { id: null, startX: 0, base: 0, pointerId: null };
-  };
-
   const buildShareCardImage = async (payload: ShareCardPayload, sticker?: ShareCardSticker) => {
     if (typeof document === "undefined") {
       return null;
@@ -1080,12 +1065,10 @@ export function CafinoOnlineApp() {
     });
     setSelectedDate(target.date);
     setShowAdd(true);
-    setSwipeOffsets({});
   };
 
   const onDeleteEntry = (id: string) => {
     removeLog(id);
-    setSwipeOffsets({});
   };
 
   const onShareCupCard = async (id: string) => {
@@ -1389,8 +1372,8 @@ export function CafinoOnlineApp() {
   }
 
   return (
-    <main className="cafino-app cafino-canvas cafino-compact cafino-frame flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-[var(--cafino-soft)]" style={themeVars}>
-      <div className="cafino-scroll min-h-0 flex-1 overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
+    <main className="cafino-app cafino-canvas cafino-compact cafino-frame flex min-h-[100dvh] w-full flex-col overflow-x-hidden bg-[var(--cafino-soft)]" style={themeVars}>
+      <div className="cafino-scroll flex-1 px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
         {activeTab === "home" && (
           <section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -1510,26 +1493,9 @@ export function CafinoOnlineApp() {
 
             {todayLogs.map((entry) => {
               const typeInfo = findCoffeeType(entry.type);
-              const offset = swipeOffsets[entry.id] ?? 0;
               return (
-                <div key={entry.id} className="relative mb-2 overflow-hidden rounded-2xl">
-                  <div className="absolute inset-y-0 right-0 flex">
-                    <button className="w-[85px] bg-[var(--cafino-accent)] text-lg font-medium text-white" onClick={() => onEditEntry(entry.id)}>Edit</button>
-                    <button className="w-[85px] bg-[var(--cafino-danger)] text-lg font-medium text-white" onClick={() => onDeleteEntry(entry.id)}>Delete</button>
-                  </div>
-
-                  <div
-                    className="cafino-surface relative flex touch-pan-y items-center gap-3 rounded-2xl bg-white p-3 transition-transform duration-200"
-                    style={{ transform: `translateX(${offset}px)` }}
-                    onPointerDown={(event) => {
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                      onSwipeStart(entry.id, event.clientX, event.pointerId);
-                    }}
-                    onPointerMove={(event) => onSwipeMove(event.clientX, event.pointerId)}
-                    onPointerUp={(event) => onSwipeEnd(event.pointerId)}
-                    onPointerCancel={(event) => onSwipeEnd(event.pointerId)}
-                    onPointerLeave={(event) => onSwipeEnd(event.pointerId)}
-                  >
+                <div key={entry.id} className="cafino-surface mb-2 rounded-2xl bg-white p-3">
+                  <div className="flex items-center gap-3">
                     {entry.photo ? (
                       <Image src={entry.photo} className="h-14 w-14 rounded-xl object-cover" alt="Coffee" width={56} height={56} unoptimized />
                     ) : (
@@ -1552,15 +1518,24 @@ export function CafinoOnlineApp() {
                       </button>
                     </div>
                   </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      className="h-10 rounded-xl border border-[var(--cafino-border)] bg-[var(--cafino-surface-2)] text-sm font-semibold text-[var(--cafino-text)]"
+                      onClick={() => onEditEntry(entry.id)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="h-10 rounded-xl bg-[var(--cafino-danger)] text-sm font-semibold text-white"
+                      onClick={() => onDeleteEntry(entry.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               );
             })}
-
-            {todayLogs.length > 0 && (
-              <div className="mx-auto mt-2 inline-flex rounded-full bg-[var(--cafino-soft-strong)] px-5 py-2 text-sm font-semibold text-[var(--cafino-text)]">
-                Swipe left to edit/delete record
-              </div>
-            )}
           </section>
         )}
 
@@ -1609,6 +1584,13 @@ export function CafinoOnlineApp() {
               >
                 <ChevronRight size={18} />
               </button>
+            </div>
+
+            <div className="mb-4 rounded-3xl bg-white p-3 sm:p-4">
+              <AccelerometerCoffeePhysics
+                logs={statsPhysicsLogs}
+                maxSprites={20}
+              />
             </div>
 
             <StatsMetricGridCard
