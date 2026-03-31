@@ -62,12 +62,20 @@ export default function RootLayout({
         <Script id="performance-api-shim" strategy="beforeInteractive">
           {`(function(){
             if (typeof window === "undefined" || !window.performance) return;
-            if (typeof window.performance.clearMarks !== "function") {
-              window.performance.clearMarks = function() {};
-            }
-            if (typeof window.performance.clearMeasures !== "function") {
-              window.performance.clearMeasures = function() {};
-            }
+            var perf = window.performance;
+            var noop = function() {};
+            var ensureFn = function(name) {
+              if (typeof perf[name] === "function") return;
+              try {
+                perf[name] = noop;
+              } catch (_) {
+                // Ignore assignment failures on locked objects.
+              }
+            };
+            ensureFn("mark");
+            ensureFn("measure");
+            ensureFn("clearMarks");
+            ensureFn("clearMeasures");
           })();`}
         </Script>
       </head>

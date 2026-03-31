@@ -6,9 +6,7 @@ import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Heart, MessageCir
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
-import AccelerometerCoffeePhysics from "@/components/ui/AccelerometerCoffeePhysics";
 import CupStickerUploader from "@/components/ui/CupStickerUploader";
-import GyroParallaxDashboard from "@/components/ui/GyroParallaxDashboard";
 import { type TabName, useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { CAFINO_THEMES, getThemeChoice } from "@/features/cafino/theme/themes";
 
@@ -381,7 +379,6 @@ export function CafinoOnlineApp() {
   const [statsMonth, setStatsMonth] = useState(new Date().getMonth());
   const [statsPeriod, setStatsPeriod] = useState<StatsPeriod>("week");
   const [statsWeekOffset, setStatsWeekOffset] = useState(0);
-  const [statsStickerUrl, setStatsStickerUrl] = useState<string | null>(null);
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installingApp, setInstallingApp] = useState(false);
   const [isStandaloneMode, setIsStandaloneMode] = useState(false);
@@ -538,13 +535,6 @@ export function CafinoOnlineApp() {
       logs: weekLogs,
     };
   }, [logs, statsWeekOffset]);
-  const statsPhysicsLogs = useMemo(() => {
-    if (statsPeriod === "week") {
-      return weeklyCupView.logs;
-    }
-
-    return statsLogs;
-  }, [statsPeriod, statsLogs, weeklyCupView.logs]);
   const statsSummary = useMemo(() => {
     const totals = statsLogs.reduce(
       (acc, item) => {
@@ -1600,54 +1590,26 @@ export function CafinoOnlineApp() {
               </button>
             </div>
 
-            <>
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <button
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)] text-[var(--cafino-text-muted)] disabled:opacity-40"
-                  onClick={() => setStatsWeekOffset((value) => value + 1)}
-                  aria-label="Previous week"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div className="inline-flex rounded-3xl bg-[var(--cafino-soft-strong)] px-4 py-3 text-center text-sm font-semibold text-[var(--cafino-text)] sm:px-5 sm:text-base">
-                  Weekly Cups: {weeklyCupView.label}
-                </div>
-                <button
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)] text-[var(--cafino-text-muted)] disabled:opacity-40"
-                  onClick={() => setStatsWeekOffset((value) => Math.max(0, value - 1))}
-                  disabled={statsWeekOffset === 0}
-                  aria-label="Next week"
-                >
-                  <ChevronRight size={18} />
-                </button>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <button
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)] text-[var(--cafino-text-muted)] disabled:opacity-40"
+                onClick={() => setStatsWeekOffset((value) => value + 1)}
+                aria-label="Previous week"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="inline-flex rounded-3xl bg-[var(--cafino-soft-strong)] px-4 py-3 text-center text-sm font-semibold text-[var(--cafino-text)] sm:px-5 sm:text-base">
+                Weekly Cups: {weeklyCupView.label}
               </div>
-
-              <div className="mb-4 rounded-3xl bg-white p-3 sm:p-4">
-                <AccelerometerCoffeePhysics
-                  logs={statsPhysicsLogs}
-                  maxSprites={20}
-                />
-              </div>
-
-              <div className="mb-4 rounded-3xl bg-white p-3 sm:p-4">
-                <CupStickerUploader
-                  onStickerReady={setStatsStickerUrl}
-                  initialStickerUrl={statsStickerUrl}
-                />
-              </div>
-
-              <div className="mb-4 rounded-3xl bg-white p-3 sm:p-4">
-                <GyroParallaxDashboard
-                  chrome={false}
-                  showSummary={false}
-                  className="w-full"
-                  stickerImageSrc={statsStickerUrl}
-                  cloudText="Cup Motion"
-                  chartText="Gyro Ready"
-                  coinText="☕"
-                />
-              </div>
-            </>
+              <button
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--cafino-soft-alt)] text-[var(--cafino-text-muted)] disabled:opacity-40"
+                onClick={() => setStatsWeekOffset((value) => Math.max(0, value - 1))}
+                disabled={statsWeekOffset === 0}
+                aria-label="Next week"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
 
             <StatsMetricGridCard
               left={{ label: "Total Cups", value: statsLogs.length }}
@@ -2229,31 +2191,13 @@ export function CafinoOnlineApp() {
             <div className="space-y-4 p-4">
               <div>
                 <label className="mb-2 block text-sm text-[var(--cafino-text-muted)]">Photo (Optional)</label>
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--cafino-border)] bg-white/50 p-8 text-center">
-                  <span className="text-2xl text-[var(--cafino-accent-strong)]">📷</span>
-                  <span className="mt-1 text-xl font-medium text-[var(--cafino-accent-strong)]">Add Photo</span>
-                  <span className="text-sm text-[var(--cafino-text-subtle)]">Capture your coffee moment</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        const result = typeof reader.result === "string" ? reader.result : null;
-                        setDraft((prev) => ({ ...prev, photo: result }));
-                      };
-                      reader.readAsDataURL(file);
-                    }}
-                  />
-                </label>
-                {draft.photo && (
-                  <div className="mt-2">
-                    <Image src={draft.photo} alt="Preview" width={400} height={180} className="h-40 w-full rounded-2xl object-cover" unoptimized />
-                  </div>
-                )}
+                <CupStickerUploader
+                  allowDefaults={false}
+                  initialStickerUrl={draft.photo}
+                  onStickerReady={(stickerUrl) => {
+                    setDraft((prev) => ({ ...prev, photo: stickerUrl }));
+                  }}
+                />
               </div>
 
               <div className="flex items-center justify-between rounded-2xl border border-[var(--cafino-border)] bg-white p-4">

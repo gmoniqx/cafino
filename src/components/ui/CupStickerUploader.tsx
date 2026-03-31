@@ -19,6 +19,7 @@ interface CupStickerUploaderProps {
   className?: string;
   onStickerReady?: (stickerUrl: string | null) => void;
   initialStickerUrl?: string | null;
+  allowDefaults?: boolean;
 }
 
 function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
@@ -188,13 +189,20 @@ export default function CupStickerUploader({
   className,
   onStickerReady,
   initialStickerUrl = DEFAULT_CUP_IMAGES[0],
+  allowDefaults = true,
 }: CupStickerUploaderProps) {
-  const [source, setSource] = useState<StickerSource>("default");
+  const [source, setSource] = useState<StickerSource>(allowDefaults ? "default" : "upload");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDefault, setSelectedDefault] = useState<string>(DEFAULT_CUP_IMAGES[0]);
   const [stickerUrl, setStickerUrl] = useState<string | null>(initialStickerUrl);
   const [generatedObjectUrl, setGeneratedObjectUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!allowDefaults && source !== "upload") {
+      setSource("upload");
+    }
+  }, [allowDefaults, source]);
 
   useEffect(() => {
     onStickerReady?.(stickerUrl);
@@ -245,8 +253,13 @@ export default function CupStickerUploader({
       setStickerUrl(nextUrl);
     } catch (processError) {
       setError(processError instanceof Error ? processError.message : "Unable to generate cup sticker.");
-      setStickerUrl(selectedDefault);
-      setSource("default");
+      if (allowDefaults) {
+        setStickerUrl(selectedDefault);
+        setSource("default");
+      } else {
+        setStickerUrl(null);
+        setSource("upload");
+      }
     } finally {
       setProcessing(false);
       event.target.value = "";
@@ -255,25 +268,34 @@ export default function CupStickerUploader({
 
   return (
     <div className={`w-full rounded-3xl border border-[var(--cafino-border)] bg-white p-4 ${className ?? ""}`}>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setSource("default")}
-          className={`rounded-full px-3 py-1.5 text-xs font-semibold sm:text-sm ${
-            source === "default" ? "bg-[var(--cafino-accent)] text-white" : "bg-[var(--cafino-soft-alt)] text-[var(--cafino-text)]"
-          }`}
-        >
-          Default Cups
-        </button>
-        <label
-          className={`cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold sm:text-sm ${
-            source === "upload" ? "bg-[var(--cafino-accent)] text-white" : "bg-[var(--cafino-soft-alt)] text-[var(--cafino-text)]"
-          }`}
-        >
-          Upload Cup Image
-          <input type="file" accept="image/*" className="hidden" onChange={onFileChange} />
-        </label>
-      </div>
+      {allowDefaults ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSource("default")}
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold sm:text-sm ${
+              source === "default" ? "bg-[var(--cafino-accent)] text-white" : "bg-[var(--cafino-soft-alt)] text-[var(--cafino-text)]"
+            }`}
+          >
+            Default Cups
+          </button>
+          <label
+            className={`cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold sm:text-sm ${
+              source === "upload" ? "bg-[var(--cafino-accent)] text-white" : "bg-[var(--cafino-soft-alt)] text-[var(--cafino-text)]"
+            }`}
+          >
+            Upload Cup Image
+            <input type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+          </label>
+        </div>
+      ) : (
+        <div className="mb-3">
+          <label className="inline-flex cursor-pointer items-center rounded-full bg-[var(--cafino-accent)] px-4 py-2 text-xs font-semibold text-white sm:text-sm">
+            Upload Cup Image
+            <input type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+          </label>
+        </div>
+      )}
 
       {source === "default" ? (
         <div className="mb-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
