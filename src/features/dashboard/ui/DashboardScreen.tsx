@@ -4,6 +4,7 @@ import { Coffee, Flame, LogOut, Settings2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 
+import GyroParallaxDashboard from "@/components/ui/GyroParallaxDashboard";
 import { useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { getThemeChoice } from "@/features/cafino/theme/themes";
 
@@ -46,20 +47,59 @@ export function DashboardScreen() {
 
   const stats = useMemo(() => {
     const today = toDateKey(new Date().toISOString());
+    const now = new Date();
     const todayLogs = logs.filter((entry) => entry.date === today);
     const todayCaffeine = todayLogs.reduce((sum, entry) => sum + entry.caffeine, 0);
-    const month = new Date().getMonth();
-    const year = new Date().getFullYear();
+    const month = now.getMonth();
+    const year = now.getFullYear();
     const monthlyLogs = logs.filter((entry) => {
       const date = new Date(entry.createdAt);
       return date.getMonth() === month && date.getFullYear() === year;
     });
+
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const currentWeekStart = new Date(startOfToday);
+    currentWeekStart.setDate(startOfToday.getDate() - 6);
+
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(currentWeekStart.getDate() - 7);
+
+    const previousWeekEnd = new Date(currentWeekStart);
+    previousWeekEnd.setMilliseconds(previousWeekEnd.getMilliseconds() - 1);
+
+    const currentWeekLogs = logs.filter((entry) => {
+      const createdAt = new Date(entry.createdAt);
+      return createdAt >= currentWeekStart && createdAt <= now;
+    });
+
+    const previousWeekLogs = logs.filter((entry) => {
+      const createdAt = new Date(entry.createdAt);
+      return createdAt >= previousWeekStart && createdAt <= previousWeekEnd;
+    });
+
+    const trendPct = previousWeekLogs.length === 0
+      ? (currentWeekLogs.length > 0 ? 100 : 0)
+      : Math.round(((currentWeekLogs.length - previousWeekLogs.length) / previousWeekLogs.length) * 100);
+
+    const trendText = trendPct >= 0 ? `+${trendPct}% vs last week` : `${trendPct}% vs last week`;
+    const trendState: "up" | "flat" | "down" = trendPct > 0 ? "up" : trendPct < 0 ? "down" : "flat";
+    const caffeineState: "normal" | "high" | "over" = todayCaffeine >= cafLimit
+      ? "over"
+      : todayCaffeine >= cafLimit * 0.8
+        ? "high"
+        : "normal";
 
     return {
       totalLogs: logs.length,
       monthlyLogs: monthlyLogs.length,
       todayCaffeine,
       caffeinePct: Math.min(100, Math.round((todayCaffeine / Math.max(100, cafLimit)) * 100)),
+      trendText,
+      cupsThisWeek: currentWeekLogs.length,
+      trendState,
+      caffeineState,
     };
   }, [logs, cafLimit]);
 
@@ -110,6 +150,20 @@ export function DashboardScreen() {
         <div className="h-2 overflow-hidden rounded-full bg-[var(--cafino-soft-alt)]">
           <div className="h-full rounded-full bg-[var(--cafino-accent)] transition-all duration-500" style={{ width: `${stats.caffeinePct}%` }} />
         </div>
+      </section>
+
+      <section className="app-card p-3.5 sm:p-4">
+        <GyroParallaxDashboard
+          title="Tilt Depth Panel"
+          summaryLabel="Daily Limit"
+          summaryValue={`${stats.caffeinePct}%`}
+          summaryHint={`${stats.todayCaffeine}mg of ${cafLimit}mg today`}
+          cloudText={`${stats.monthlyLogs} this month`}
+          chartText={stats.trendText}
+          coinText={String(stats.cupsThisWeek)}
+          caffeineState={stats.caffeineState}
+          trendState={stats.trendState}
+        />
       </section>
 
       <section className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">

@@ -1274,7 +1274,7 @@ export function CafinoOnlineApp() {
 
   if (!started) {
     return (
-      <main className="cafino-app cafino-compact cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-3.5 sm:p-5" style={themeVars}>
+      <main className="cafino-app cafino-canvas cafino-compact cafino-frame flex w-full flex-col bg-[var(--cafino-soft)] p-3.5 sm:p-5" style={themeVars}>
         <section className="relative mt-2 overflow-hidden rounded-[32px] border border-[var(--cafino-border)] bg-white p-4 shadow-[0_14px_30px_rgba(43,31,18,0.08)] sm:p-5">
           <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-[var(--cafino-soft-strong)] opacity-55" />
           <div className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-[var(--cafino-surface-2)] opacity-70" />
@@ -1340,8 +1340,8 @@ export function CafinoOnlineApp() {
   }
 
   return (
-    <main className="cafino-app cafino-compact cafino-frame flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-[var(--cafino-soft)]" style={themeVars}>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
+    <main className="cafino-app cafino-canvas cafino-compact cafino-frame flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-[var(--cafino-soft)]" style={themeVars}>
+      <div className="cafino-scroll min-h-0 flex-1 overflow-y-auto px-3.5 pb-3 pt-3 sm:px-4 sm:pt-4">
         {activeTab === "home" && (
           <section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -1777,7 +1777,7 @@ export function CafinoOnlineApp() {
       </div>
 
       <nav
-        className="mt-auto grid grid-cols-3 gap-1 border-t border-[var(--cafino-border)] bg-[color-mix(in_oklab,var(--cafino-soft)_86%,white)] px-2 pt-2 sm:gap-2 sm:px-3"
+        className="cafino-bottom-nav mt-auto grid grid-cols-3 gap-1 border-t border-[var(--cafino-border)] bg-[color-mix(in_oklab,var(--cafino-soft)_86%,white)] px-2 pt-2 sm:gap-2 sm:px-3"
         style={{
           paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
           paddingLeft: "max(0.5rem, env(safe-area-inset-left))",
@@ -1786,9 +1786,9 @@ export function CafinoOnlineApp() {
       >
         <button
           type="button"
-          className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
+          className={`cafino-tab flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
             activeTab === "home"
-              ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
+              ? "cafino-tab-active bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
               : "text-[var(--cafino-text-muted)]"
           }`}
           aria-label="Home"
@@ -1799,9 +1799,9 @@ export function CafinoOnlineApp() {
         </button>
         <button
           type="button"
-          className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
+          className={`cafino-tab flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
             activeTab === "stats"
-              ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
+              ? "cafino-tab-active bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
               : "text-[var(--cafino-text-muted)]"
           }`}
           aria-label="Stats"
@@ -1812,9 +1812,9 @@ export function CafinoOnlineApp() {
         </button>
         <button
           type="button"
-          className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
+          className={`cafino-tab flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-[11px] leading-none min-[360px]:text-xs sm:min-h-[3.1rem] sm:gap-1 ${
             activeTab === "settings"
-              ? "bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
+              ? "cafino-tab-active bg-[var(--cafino-soft-strong)] font-semibold text-[var(--cafino-accent-strong)]"
               : "text-[var(--cafino-text-muted)]"
           }`}
           aria-label="Settings"
@@ -2173,6 +2173,23 @@ export function CafinoOnlineApp() {
                     <div className="text-right">
                       <p className="text-xl font-bold text-[var(--cafino-accent-strong)] min-[360px]:text-2xl">{entry.caffeine}</p>
                       <p className="text-xs text-[var(--cafino-text-muted)]">mg</p>
+                      <div className="mt-1 flex items-center justify-end gap-1.5">
+                        <button
+                          className="rounded-full border border-[var(--cafino-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--cafino-accent-strong)]"
+                          onClick={() => {
+                            setShowDateDetail(false);
+                            onEditEntry(entry.id);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="rounded-full border border-[var(--cafino-danger)] px-2 py-0.5 text-[11px] font-semibold text-[var(--cafino-danger)]"
+                          onClick={() => onDeleteEntry(entry.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

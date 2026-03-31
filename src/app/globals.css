@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-display);
+  --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -57,38 +57,38 @@
   --motion-fast: 180ms;
   --motion-medium: 260ms;
   --motion-slow: 360ms;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: oklch(0.982 0.013 69);
+  --foreground: oklch(0.29 0.045 37);
+  --card: oklch(0.995 0.009 67);
+  --card-foreground: oklch(0.29 0.045 37);
+  --popover: oklch(0.995 0.009 67);
+  --popover-foreground: oklch(0.29 0.045 37);
+  --primary: oklch(0.55 0.14 42);
+  --primary-foreground: oklch(0.99 0.01 65);
+  --secondary: oklch(0.955 0.02 67);
+  --secondary-foreground: oklch(0.36 0.06 35);
+  --muted: oklch(0.95 0.017 65);
+  --muted-foreground: oklch(0.52 0.06 40);
+  --accent: oklch(0.93 0.03 62);
+  --accent-foreground: oklch(0.36 0.06 35);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.89 0.023 58);
+  --input: oklch(0.9 0.018 62);
+  --ring: oklch(0.64 0.12 44);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0.012 68);
+  --sidebar-foreground: oklch(0.31 0.05 38);
+  --sidebar-primary: oklch(0.56 0.13 42);
+  --sidebar-primary-foreground: oklch(0.99 0.01 65);
+  --sidebar-accent: oklch(0.94 0.02 66);
+  --sidebar-accent-foreground: oklch(0.36 0.06 35);
+  --sidebar-border: oklch(0.89 0.023 58);
+  --sidebar-ring: oklch(0.64 0.12 44);
 }
 
 .dark {
@@ -131,6 +131,11 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at 5% 2%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 36%),
+      radial-gradient(circle at 95% 10%, color-mix(in oklab, var(--accent) 55%, transparent), transparent 34%),
+      linear-gradient(160deg, color-mix(in oklab, var(--background) 86%, white), var(--background));
+    min-height: 100dvh;
   }
   html {
     @apply font-sans;
@@ -162,7 +167,7 @@
   }
 
   .cafino-frame {
-    width: min(100%, clamp(320px, 94vw, 720px));
+    width: min(100%, clamp(320px, 94vw, 760px));
     margin-inline: auto;
     min-height: 100dvh;
     padding-bottom: env(safe-area-inset-bottom);
@@ -172,7 +177,7 @@
     font-family: var(--font-display), ui-serif, Georgia, serif;
     font-size: clamp(1.9rem, 8vw, 2rem);
     line-height: 1.08;
-    font-weight: 300;
+    font-weight: 500;
     letter-spacing: 0.01em;
   }
 
@@ -206,9 +211,10 @@
 
   .app-card {
     border-radius: 1.25rem;
-    border: 1px solid color-mix(in oklab, var(--cafino-accent, var(--foreground)) 14%, white);
-    background-color: color-mix(in oklab, white 93%, var(--cafino-soft, var(--background)));
-    box-shadow: 0 10px 24px rgba(24, 19, 11, 0.06);
+    border: 1px solid color-mix(in oklab, var(--cafino-accent, var(--foreground)) 18%, white);
+    background-color: color-mix(in oklab, white 84%, var(--cafino-soft, var(--background)));
+    box-shadow: 0 14px 30px rgba(37, 25, 13, 0.11);
+    backdrop-filter: blur(8px);
   }
 
   .app-input {
@@ -237,17 +243,49 @@
     color: white;
     font-size: clamp(1rem, 3.1vw, 1.1rem);
     font-weight: 650;
-    box-shadow: 0 8px 20px color-mix(in oklab, var(--cafino-accent, #8f7648) 28%, transparent);
+    box-shadow: 0 12px 26px color-mix(in oklab, var(--cafino-accent, #8f7648) 30%, transparent);
   }
 
   .cafino-app {
-    --cafino-shadow: 0 10px 25px rgba(68, 49, 30, 0.08);
-    --cafino-shadow-soft: 0 6px 16px rgba(68, 49, 30, 0.06);
-    background-image: radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.6), transparent 40%);
+    --cafino-shadow: 0 14px 32px rgba(68, 49, 30, 0.12);
+    --cafino-shadow-soft: 0 10px 22px rgba(68, 49, 30, 0.1);
+    position: relative;
+    isolation: isolate;
+    background-image:
+      radial-gradient(circle at 8% 2%, color-mix(in oklab, var(--cafino-soft-strong) 76%, white), transparent 34%),
+      radial-gradient(circle at 88% 14%, color-mix(in oklab, var(--cafino-accent) 18%, white), transparent 32%),
+      linear-gradient(155deg, color-mix(in oklab, var(--cafino-soft) 94%, white), color-mix(in oklab, var(--cafino-soft) 82%, var(--cafino-accent) 6%));
+  }
+
+  .cafino-app::before,
+  .cafino-app::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    z-index: -1;
+    border-radius: 999px;
+    filter: blur(8px);
+  }
+
+  .cafino-app::before {
+    width: clamp(10rem, 38vw, 16rem);
+    height: clamp(10rem, 38vw, 16rem);
+    right: -18%;
+    top: 12%;
+    background: color-mix(in oklab, var(--cafino-accent) 16%, transparent);
+  }
+
+  .cafino-app::after {
+    width: clamp(9rem, 34vw, 13rem);
+    height: clamp(9rem, 34vw, 13rem);
+    left: -16%;
+    bottom: 16%;
+    background: color-mix(in oklab, var(--cafino-soft-strong) 30%, transparent);
   }
 
   .cafino-app section {
-    animation: cafino-fade-up 320ms ease-out both;
+    animation: cafino-fade-up 420ms cubic-bezier(0.18, 0.64, 0.2, 1) both;
+    animation-delay: 90ms;
   }
 
   .cafino-app button,
@@ -261,7 +299,10 @@
   }
 
   .cafino-surface {
+    background-color: color-mix(in oklab, white 84%, var(--cafino-soft) 16%);
+    border: 1px solid color-mix(in oklab, var(--cafino-border) 72%, white);
     box-shadow: var(--cafino-shadow-soft);
+    backdrop-filter: blur(8px);
   }
 
   .cafino-sheet {
@@ -286,7 +327,7 @@
     font-family: var(--font-display), ui-serif, Georgia, serif;
     font-size: clamp(2rem, 7.8vw, 2.35rem);
     line-height: 1.04;
-    font-weight: 700;
+    font-weight: 600;
     letter-spacing: 0.01em;
   }
 
@@ -294,7 +335,46 @@
     font-family: var(--font-display), ui-serif, Georgia, serif;
     font-size: clamp(1.48rem, 5.2vw, 1.75rem);
     line-height: 1.08;
-    font-weight: 700;
+    font-weight: 600;
+  }
+
+  .cafino-canvas {
+    border-radius: clamp(1.4rem, 3.6vw, 1.95rem);
+    border: 1px solid color-mix(in oklab, var(--cafino-border) 78%, white);
+    box-shadow: 0 20px 38px rgba(47, 33, 19, 0.13);
+  }
+
+  .cafino-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--cafino-accent) 45%, transparent) transparent;
+  }
+
+  .cafino-bottom-nav {
+    border-top: 1px solid color-mix(in oklab, var(--cafino-border) 85%, white);
+    background: linear-gradient(
+      to top,
+      color-mix(in oklab, var(--cafino-soft) 74%, white),
+      color-mix(in oklab, var(--cafino-soft) 92%, white)
+    );
+    backdrop-filter: blur(10px);
+  }
+
+  .cafino-tab {
+    transition: transform var(--motion-fast) ease, background-color var(--motion-fast) ease, color var(--motion-fast) ease,
+      box-shadow var(--motion-fast) ease;
+  }
+
+  .cafino-tab-active {
+    box-shadow: 0 8px 18px color-mix(in oklab, var(--cafino-accent) 24%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .cafino-tab svg {
+    transition: transform var(--motion-fast) ease;
+  }
+
+  .cafino-tab-active svg {
+    transform: translateY(-1px) scale(1.05);
   }
 
   .cafino-text-md {
@@ -411,11 +491,13 @@
 @keyframes cafino-fade-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px) scale(0.985);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 

@@ -1,18 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Geist_Mono, Jost } from "next/font/google";
+import { Fraunces, Geist_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 import { PwaRegistrar } from "@/components/pwa/PwaRegistrar";
 
-const bodySans = Jost({
-  variable: "--font-sans",
+const bodySans = Manrope({
+  variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const displaySerif = Cormorant_Garamond({
+const displaySerif = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["300", "400"],
+  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
 });
 
@@ -44,7 +44,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#8f7648",
+  themeColor: "#9a5a3c",
 };
 
 export default function RootLayout({
