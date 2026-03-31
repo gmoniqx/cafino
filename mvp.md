@@ -1,6 +1,6 @@
 # Cafino Online MVP
 
-Last updated: 2026-03-21
+Last updated: 2026-04-01
 Owner: Product + Engineering
 Status: Active (living document)
 
@@ -18,6 +18,9 @@ In scope:
 - Home tracking flow (add/edit/remove/share coffee logs)
 - Calendar-based day browsing
 - Stats view (week/month/year summaries)
+- Accelerometer-driven 2D cup physics arena inside Statistics
+- Cup sticker uploader with client-side background removal
+- Gyroscope parallax preview with uploaded or default cup sticker
 - Settings (daily limit, toggles, wallpaper, widgets guide)
 - Brand Management sheet (local custom brand list)
 - About Developer sheet (contact, portfolio, feedback, donation CTA)
@@ -58,6 +61,16 @@ Out of scope (post-MVP):
 - [x] Cups, caffeine, sugar, spend summaries
 - [x] Bar chart visualization
 - [x] Stats sharing fallback (native share or clipboard)
+- [x] Month arrow controls force month mode for consistent navigation
+- [x] Physics cup population is driven by user logs only (no placeholder cups)
+
+### Motion + Media
+- [x] Device motion integration for live gravity mapping in physics world
+- [x] Bounded 2D rigid-body simulation for cup sprites within stats container
+- [x] Cup sticker processing via @imgly/background-removal (client-side)
+- [x] Cup-focused extraction by keeping largest transparent-foreground component
+- [x] Sticker outline/drop-shadow styling for die-cut icon look
+- [x] Gyroscope parallax layer accepts generated sticker image
 
 ### Theming + UX
 - [x] Multi-theme picker
@@ -107,6 +120,11 @@ Out of scope (post-MVP):
 5. Performance guardrails for large log history
 
 ## 9. Change Log
+- 2026-04-01: Added accelerometer-driven physics arena to Statistics page.
+- 2026-04-01: Added cup sticker uploader with client-side background removal and sticker rendering.
+- 2026-04-01: Added gyroscope parallax sticker preview integration in Statistics.
+- 2026-04-01: Updated stats month navigation so month arrows force Month mode.
+- 2026-04-01: Updated physics behavior to spawn cups only from actual user logs.
 - 2026-03-21: Initial MVP doc created for online-only Cafino app.
 - 2026-03-21: Recorded theme system as app-wide and persisted.
 - 2026-03-21: Added installable PWA support (manifest, service worker, offline fallback).

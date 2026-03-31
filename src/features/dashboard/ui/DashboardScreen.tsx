@@ -4,7 +4,7 @@ import { Coffee, Flame, LogOut, Settings2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 
-import GyroParallaxDashboard from "@/components/ui/GyroParallaxDashboard";
+import AccelerometerCoffeePhysics from "@/components/ui/AccelerometerCoffeePhysics";
 import { useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { getThemeChoice } from "@/features/cafino/theme/themes";
 
@@ -153,17 +153,7 @@ export function DashboardScreen() {
       </section>
 
       <section className="app-card p-3.5 sm:p-4">
-        <GyroParallaxDashboard
-          title="Tilt Depth Panel"
-          summaryLabel="Daily Limit"
-          summaryValue={`${stats.caffeinePct}%`}
-          summaryHint={`${stats.todayCaffeine}mg of ${cafLimit}mg today`}
-          cloudText={`${stats.monthlyLogs} this month`}
-          chartText={stats.trendText}
-          coinText={String(stats.cupsThisWeek)}
-          caffeineState={stats.caffeineState}
-          trendState={stats.trendState}
-        />
+        <AccelerometerCoffeePhysics logs={logs} />
       </section>
 
       <section className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">

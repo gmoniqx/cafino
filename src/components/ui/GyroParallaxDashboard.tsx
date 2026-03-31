@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type OrientationPermissionState = "unknown" | "granted" | "denied" | "unsupported";
@@ -52,12 +53,15 @@ type TrendState = "up" | "flat" | "down";
 interface GyroParallaxDashboardProps {
   title?: string;
   className?: string;
+  chrome?: boolean;
+  showSummary?: boolean;
   summaryLabel?: string;
   summaryValue?: string;
   summaryHint?: string;
   cloudText?: string;
   chartText?: string;
   coinText?: string;
+  stickerImageSrc?: string | null;
   caffeineState?: CaffeineState;
   trendState?: TrendState;
 }
@@ -69,12 +73,15 @@ function clamp(value: number, min: number, max: number) {
 export default function GyroParallaxDashboard({
   title = "Motion Dashboard",
   className,
+  chrome = true,
+  showSummary = true,
   summaryLabel = "Daily Summary",
   summaryValue = "78%",
   summaryHint = "Engagement trending upward",
   cloudText = "Cloud Sync",
   chartText = "+12.4% Growth",
   coinText = "$",
+  stickerImageSrc = null,
   caffeineState = "normal",
   trendState = "up",
 }: GyroParallaxDashboardProps) {
@@ -134,6 +141,22 @@ export default function GyroParallaxDashboard({
       }
     };
   }, [isListening]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (chrome) return;
+    if (isListening || permission !== "unknown") return;
+    if (!window.DeviceOrientationEvent || iosRequiresPermission) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      setPermission("granted");
+      setIsListening(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [chrome, iosRequiresPermission, isListening, permission]);
 
   const enableGyroscope = async () => {
     if (typeof window === "undefined") return;
@@ -196,24 +219,28 @@ export default function GyroParallaxDashboard({
 
   return (
     <section className={`w-full ${className ?? ""}`}>
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="cafino-title-lg text-[var(--cafino-text)]">{title}</h2>
-        <button
-          onClick={enableGyroscope}
-          className="rounded-xl bg-[var(--cafino-accent)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--cafino-accent-strong)]"
-        >
-          {isListening ? "Gyro Active" : "Enable Gyro"}
-        </button>
-      </div>
+      {chrome ? (
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="cafino-title-lg text-[var(--cafino-text)]">{title}</h2>
+          <button
+            onClick={enableGyroscope}
+            className="rounded-xl bg-[var(--cafino-accent)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--cafino-accent-strong)]"
+          >
+            {isListening ? "Gyro Active" : "Enable Gyro"}
+          </button>
+        </div>
+      ) : null}
 
       <div className="relative h-[360px] overflow-hidden rounded-3xl border border-[var(--cafino-border)] bg-[color-mix(in_oklab,var(--cafino-soft)_85%,white)] p-6 shadow-[0_16px_34px_rgba(43,31,18,0.12)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,color-mix(in_oklab,var(--cafino-soft)_55%,white),transparent_42%)]" />
 
-        <div className="relative z-10 rounded-2xl border border-[var(--cafino-border)] bg-white/80 p-4 backdrop-blur-md">
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--cafino-text-muted)]">{summaryLabel}</p>
-          <p className="mt-2 text-3xl font-bold text-[var(--cafino-text)]">{summaryValue}</p>
-          <p className="mt-1 text-sm text-[var(--cafino-text-soft)]">{summaryHint}</p>
-        </div>
+        {showSummary ? (
+          <div className="relative z-10 rounded-2xl border border-[var(--cafino-border)] bg-white/80 p-4 backdrop-blur-md">
+            <p className="text-xs uppercase tracking-[0.16em] text-[var(--cafino-text-muted)]">{summaryLabel}</p>
+            <p className="mt-2 text-3xl font-bold text-[var(--cafino-text)]">{summaryValue}</p>
+            <p className="mt-1 text-sm text-[var(--cafino-text-soft)]">{summaryHint}</p>
+          </div>
+        ) : null}
 
         {LAYERS.map((layer) => {
           const x = offset.x * layer.depth;
@@ -240,15 +267,34 @@ export default function GyroParallaxDashboard({
             </div>
           );
         })}
+
+        {stickerImageSrc ? (
+          <div
+            aria-label="Sticker layer"
+            className="absolute left-1/2 top-[54%] z-20 -translate-x-1/2 transition-transform duration-200 ease-out"
+            style={{ transform: `translate3d(${offset.x * 1.45}px, ${offset.y * 1.45}px, 0)` }}
+          >
+            <Image
+              src={stickerImageSrc}
+              alt="Cup sticker"
+              width={96}
+              height={96}
+              unoptimized
+              className="h-24 w-24 object-contain [filter:drop-shadow(0_0_2px_white)_drop-shadow(0_0_2px_white)_drop-shadow(0_0_2px_white)_drop-shadow(0_6px_10px_rgba(0,0,0,0.16))]"
+            />
+          </div>
+        ) : null}
       </div>
 
-      <p className="mt-3 text-sm text-[var(--cafino-text-soft)]">
-        {permission === "unsupported" && "DeviceOrientation is not supported on this device/browser."}
-        {permission === "denied" && "Motion permission denied. Allow motion access in browser settings and try again."}
-        {permission === "unknown" && iosRequiresPermission && "iOS requires tapping Enable Gyro before motion data is available."}
-        {permission === "granted" && "Tilt your device to see layered parallax depth in action."}
-        {permission === "unknown" && !iosRequiresPermission && "Tap Enable Gyro, then tilt your device to see the parallax effect."}
-      </p>
+      {chrome ? (
+        <p className="mt-3 text-sm text-[var(--cafino-text-soft)]">
+          {permission === "unsupported" && "DeviceOrientation is not supported on this device/browser."}
+          {permission === "denied" && "Motion permission denied. Allow motion access in browser settings and try again."}
+          {permission === "unknown" && iosRequiresPermission && "iOS requires tapping Enable Gyro before motion data is available."}
+          {permission === "granted" && "Tilt your device to see layered parallax depth in action."}
+          {permission === "unknown" && !iosRequiresPermission && "Tap Enable Gyro, then tilt your device to see the parallax effect."}
+        </p>
+      ) : null}
     </section>
   );
 }

@@ -6,6 +6,9 @@ import { BarChart3, Camera, ChevronLeft, ChevronRight, Coffee, Heart, MessageCir
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
+import AccelerometerCoffeePhysics from "@/components/ui/AccelerometerCoffeePhysics";
+import CupStickerUploader from "@/components/ui/CupStickerUploader";
+import GyroParallaxDashboard from "@/components/ui/GyroParallaxDashboard";
 import { type TabName, useCafinoStore } from "@/features/cafino/store/useCafinoStore";
 import { CAFINO_THEMES, getThemeChoice } from "@/features/cafino/theme/themes";
 
@@ -182,6 +185,12 @@ interface ShareCardSticker {
   label: string;
 }
 
+interface StatsMetricItem {
+  label: string;
+  value: string | number;
+  unit?: string;
+}
+
 const DEFAULT_BEAN_TEMPLATES: BeanTemplate[] = [
   {
     id: "bean-colombian-supremo",
@@ -212,6 +221,29 @@ const DEFAULT_BREW_TEMPLATES: BrewTemplate[] = [
   { id: "brew-aeropress", label: "AeroPress", method: "AeroPress", grind: "Medium Fine", dose: 17, water: 250, time: 90, unit: "s" },
   { id: "brew-v60", label: "V60", method: "V60", grind: "Medium", dose: 15, water: 250, time: 2, unit: "m" },
 ];
+
+function StatsMetricGridCard({ left, right }: { left: StatsMetricItem; right: StatsMetricItem }) {
+  const renderMetric = (metric: StatsMetricItem) => (
+    <div>
+      <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">{metric.label}</p>
+      <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">
+        {metric.value}
+        {metric.unit ? (
+          <span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">{metric.unit}</span>
+        ) : null}
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
+      <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
+        {renderMetric(left)}
+        {renderMetric(right)}
+      </div>
+    </div>
+  );
+}
 
 function DrinkTypeIcon({
   type,
@@ -349,6 +381,7 @@ export function CafinoOnlineApp() {
   const [statsMonth, setStatsMonth] = useState(new Date().getMonth());
   const [statsPeriod, setStatsPeriod] = useState<StatsPeriod>("week");
   const [statsWeekOffset, setStatsWeekOffset] = useState(0);
+  const [statsStickerUrl, setStatsStickerUrl] = useState<string | null>(null);
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installingApp, setInstallingApp] = useState(false);
   const [isStandaloneMode, setIsStandaloneMode] = useState(false);
@@ -505,6 +538,31 @@ export function CafinoOnlineApp() {
       logs: weekLogs,
     };
   }, [logs, statsWeekOffset]);
+  const statsPhysicsLogs = useMemo(() => {
+    if (statsPeriod === "week") {
+      return weeklyCupView.logs;
+    }
+
+    return statsLogs;
+  }, [statsPeriod, statsLogs, weeklyCupView.logs]);
+  const statsSummary = useMemo(() => {
+    const totals = statsLogs.reduce(
+      (acc, item) => {
+        acc.spend += item.price;
+        acc.caffeine += item.caffeine;
+        acc.sugar += item.sugar;
+        return acc;
+      },
+      { spend: 0, caffeine: 0, sugar: 0 },
+    );
+    const activeDays = Math.max(1, new Set(statsLogs.map((item) => item.date)).size);
+
+    return {
+      ...totals,
+      dailyAvgCaffeine: statsLogs.length === 0 ? 0 : Math.round(totals.caffeine / activeDays),
+      dailyAvgSugar: statsLogs.length === 0 ? 0 : Math.round(totals.sugar / activeDays),
+    };
+  }, [statsLogs]);
   const showIosInstallHint = isIosSafari && !isStandaloneMode && !dismissedIosInstallHint;
 
   useEffect(() => {
@@ -590,6 +648,7 @@ export function CafinoOnlineApp() {
   }, []);
 
   const onStatsMonthShift = (direction: -1 | 1) => {
+    setStatsPeriod("month");
     const nextMonth = statsMonth + direction;
     if (nextMonth > 11) {
       setStatsMonth(0);
@@ -1080,9 +1139,9 @@ export function CafinoOnlineApp() {
   };
 
   const onShareStats = async () => {
-    const totalCaffeine = statsLogs.reduce((sum, item) => sum + item.caffeine, 0);
-    const totalSugar = statsLogs.reduce((sum, item) => sum + item.sugar, 0);
-    const totalSpend = statsLogs.reduce((sum, item) => sum + item.price, 0);
+    const totalCaffeine = statsSummary.caffeine;
+    const totalSugar = statsSummary.sugar;
+    const totalSpend = statsSummary.spend;
     const reportLabel = statsPeriod[0].toUpperCase() + statsPeriod.slice(1);
     const text = [
       `Cafino ${reportLabel} Report`,
@@ -1281,7 +1340,7 @@ export function CafinoOnlineApp() {
 
           <div className="relative flex items-start gap-3 sm:gap-4">
             <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--cafino-border)] bg-white shadow-sm sm:h-20 sm:w-20">
-              <Image src="/download.png" alt="Cafino logo" width={80} height={80} className="h-full w-full object-cover" priority />
+              <Image src="/download.png" alt="Cafino logo" width={80} height={80} className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--cafino-text-muted)]">Coffee Journal</p>
@@ -1446,7 +1505,7 @@ export function CafinoOnlineApp() {
               </div>
             )}
 
-            <h3 className="mb-2 text-lg font-bold min-[360px]:text-xl sm:text-2xl">Today's drink</h3>
+            <h3 className="mb-2 text-lg font-bold min-[360px]:text-xl sm:text-2xl">Today&apos;s drink</h3>
             <div className="cafino-surface mb-3 rounded-2xl bg-white p-3.5 sm:p-4">
               <p className="text-sm text-[var(--cafino-text-muted)]">Caffeine</p>
               <div className="my-2 h-1.5 rounded-full bg-[var(--cafino-soft-alt)]">
@@ -1563,89 +1622,47 @@ export function CafinoOnlineApp() {
                 </button>
               </div>
 
-              <div className="relative mb-4 h-56 w-full overflow-hidden rounded-3xl bg-white p-3 sm:h-60 sm:p-4">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.7),transparent_45%)]" />
-                {weeklyCupView.logs.length === 0 ? (
-                  <div className="relative flex h-full items-center justify-center rounded-2xl bg-[var(--cafino-surface-2)] px-4 text-center text-sm font-medium text-[var(--cafino-text-muted)]">
-                    No cups logged this week yet.
-                  </div>
-                ) : (
-                  <div className="relative flex h-full items-end gap-3 overflow-x-auto overflow-y-hidden pr-1">
-                    {weeklyCupView.logs.map((entry, idx) => {
-                      const typeInfo = findCoffeeType(entry.type);
+              <div className="mb-4 rounded-3xl bg-white p-3 sm:p-4">
+                <AccelerometerCoffeePhysics
+                  logs={statsPhysicsLogs}
+                  maxSprites={20}
+                />
+              </div>
 
-                      return (
-                        <div
-                          key={entry.id}
-                          className="cafino-cup-sway flex h-40 min-w-[6.2rem] shrink-0 items-center justify-center"
-                          style={{
-                            animationDelay: `${(idx % 8) * 0.22}s`,
-                            animationDuration: `${4.6 + (idx % 5) * 0.35}s`,
-                          }}
-                          title={`${entry.name || typeInfo.label} · ${formatTime(entry.createdAt)}`}
-                        >
-                          <div className="cafino-drink-sticker">
-                            {entry.photo ? (
-                              <Image
-                                src={entry.photo}
-                                alt={entry.name || typeInfo.label}
-                                width={124}
-                                height={124}
-                                className="h-28 w-28 object-contain"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="flex h-28 w-28 items-center justify-center">
-                                <DrinkTypeIcon type={typeInfo} size={108} className="h-24 w-24 object-contain" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+              <div className="mb-4 rounded-3xl bg-white p-3 sm:p-4">
+                <CupStickerUploader
+                  onStickerReady={setStatsStickerUrl}
+                  initialStickerUrl={statsStickerUrl}
+                />
+              </div>
+
+              <div className="mb-4 rounded-3xl bg-white p-3 sm:p-4">
+                <GyroParallaxDashboard
+                  chrome={false}
+                  showSummary={false}
+                  className="w-full"
+                  stickerImageSrc={statsStickerUrl}
+                  cloudText="Cup Motion"
+                  chartText="Gyro Ready"
+                  coinText="☕"
+                />
               </div>
             </>
 
-            <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
-              <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-                <div>
-                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Cups</p>
-                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.length}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Spend</p>
-                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{formatPeso(statsLogs.reduce((s, l) => s + l.price, 0))}</p>
-                </div>
-              </div>
-            </div>
+            <StatsMetricGridCard
+              left={{ label: "Total Cups", value: statsLogs.length }}
+              right={{ label: "Total Spend", value: formatPeso(statsSummary.spend) }}
+            />
 
-            <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
-              <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-                <div>
-                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Caffeine</p>
-                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.reduce((s, l) => s + l.caffeine, 0)}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">mg</span></p>
-                </div>
-                <div>
-                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Daily Avg</p>
-                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.length === 0 ? 0 : Math.round(statsLogs.reduce((s, l) => s + l.caffeine, 0) / Math.max(1, new Set(statsLogs.map((i) => i.date)).size))}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">mg</span></p>
-                </div>
-              </div>
-            </div>
+            <StatsMetricGridCard
+              left={{ label: "Total Caffeine", value: statsSummary.caffeine, unit: "mg" }}
+              right={{ label: "Daily Avg", value: statsSummary.dailyAvgCaffeine, unit: "mg" }}
+            />
 
-            <div className="cafino-surface mb-4 rounded-3xl bg-white p-4 sm:p-5">
-              <div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-                <div>
-                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Total Sugar</p>
-                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.reduce((s, l) => s + l.sugar, 0)}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">g</span></p>
-                </div>
-                <div>
-                  <p className="text-sm text-[var(--cafino-text)] min-[360px]:text-base sm:text-lg">Daily Avg</p>
-                  <p className="mt-1 text-3xl font-bold text-[var(--cafino-accent)] min-[360px]:text-4xl sm:text-5xl">{statsLogs.length === 0 ? 0 : Math.round(statsLogs.reduce((s, l) => s + l.sugar, 0) / Math.max(1, new Set(statsLogs.map((i) => i.date)).size))}<span className="ml-1 text-xl font-semibold text-[var(--cafino-text-muted)] min-[360px]:text-2xl sm:text-3xl">g</span></p>
-                </div>
-              </div>
-            </div>
+            <StatsMetricGridCard
+              left={{ label: "Total Sugar", value: statsSummary.sugar, unit: "g" }}
+              right={{ label: "Daily Avg", value: statsSummary.dailyAvgSugar, unit: "g" }}
+            />
 
             <div className="cafino-surface rounded-3xl bg-white p-4 sm:p-5">
               <p className="mb-4 text-base text-[var(--cafino-text)] sm:text-lg">Daily Cups</p>

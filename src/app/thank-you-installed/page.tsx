@@ -17,12 +17,12 @@ export default function ThankYouInstalledPage() {
           >
             Back to Website
           </Link>
-          <a
+          <Link
             href="/"
             className="rounded-2xl bg-[#8f7648] px-5 py-3 text-sm font-semibold text-white hover:bg-[#7f6a40]"
           >
             Open Cafino
-          </a>
+          </Link>
         </div>
       </div>
     </main>

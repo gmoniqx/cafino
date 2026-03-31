@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist_Mono, Manrope } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { PwaRegistrar } from "@/components/pwa/PwaRegistrar";
 
@@ -57,6 +58,19 @@ export default function RootLayout({
       lang="en"
       className={`${bodySans.variable} ${displaySerif.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <Script id="performance-api-shim" strategy="beforeInteractive">
+          {`(function(){
+            if (typeof window === "undefined" || !window.performance) return;
+            if (typeof window.performance.clearMarks !== "function") {
+              window.performance.clearMarks = function() {};
+            }
+            if (typeof window.performance.clearMeasures !== "function") {
+              window.performance.clearMeasures = function() {};
+            }
+          })();`}
+        </Script>
+      </head>
       <body className="min-h-full flex flex-col">
         <PwaRegistrar />
         {children}
